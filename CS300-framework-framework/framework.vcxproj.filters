@@ -53,6 +53,24 @@
     <ClInclude Include="src\globals.h">
       <Filter>globals</Filter>
     </ClInclude>
+    <ClInclude Include="src\object.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\light.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ambientLight.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\collider.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ray.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\boxCollider.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\final.frag">

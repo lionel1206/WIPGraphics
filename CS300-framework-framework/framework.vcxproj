@@ -19,9 +19,15 @@
     <ClCompile Include="src\timer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\ambientLight.h" />
+    <ClInclude Include="src\boxCollider.h" />
+    <ClInclude Include="src\collider.h" />
     <ClInclude Include="src\fbo.h" />
     <ClInclude Include="src\globals.h" />
+    <ClInclude Include="src\light.h" />
     <ClInclude Include="src\models.h" />
+    <ClInclude Include="src\object.h" />
+    <ClInclude Include="src\ray.h" />
     <ClInclude Include="src\scene.h" />
     <ClInclude Include="src\shader.h" />
     <ClInclude Include="src\timer.h" />
