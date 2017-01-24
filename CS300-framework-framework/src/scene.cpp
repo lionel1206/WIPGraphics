@@ -17,6 +17,7 @@
 #include "fbo.h"
 #include "scene.h"
 #include "models.h"
+#include "globals.h"
 
 #include "math.h"
 #include <fstream>
@@ -49,7 +50,7 @@ int shininess = 120;
 
 const float PI = 3.14159f;
 const float rad = PI/180.0f;
-
+meshData boxMesh, sphereMesh, groundMesh;
 ////////////////////////////////////////////////////////////////////////
 // A small function to provide a more friendly method of defining
 // colors.  The parameters are hue (0..1: fraction of distance around
@@ -105,7 +106,16 @@ void InitializeScene(Scene &scene)
     scene.translatex = 0.0;
     scene.translatey = -1.0;
     scene.zoom = 30.0;
-    
+
+	scene.cameraAngle = 45.f;
+	scene.cameraFi = 45.f;
+	scene.cameraRadius = 50.f;
+	scene.cameraLookAt = glm::vec3(0, 0, 0);
+	global::gEditorCamera.initialize(scene.cameraAngle,
+		                             scene.cameraFi,
+		                             scene.cameraRadius,
+		                             scene.cameraLookAt);
+
     // Set the initial light position parammeters
     scene.lightSpin = -90;
     scene.lightTilt = -60.0;
@@ -115,9 +125,17 @@ void InitializeScene(Scene &scene)
     glEnable(GL_DEPTH_TEST);
 
     // Create the scene models
-    scene.sphereVAO = CreateSphere(32, scene.sphereCount);
-    scene.teapotVAO = CreateTeapot(12, scene.teapotCount);
-    scene.groundVAO = CreateGround(200.0, 40, scene.groundCount);
+	if (!loadModelFromFile("assets/model/ground.json", groundMesh))
+		std::cout << "Unable to load assets/model/ground.json" << std::endl;
+	scene.groundVAO = createVAO(groundMesh);
+
+	if (!loadModelFromFile("assets/model/cube.json", boxMesh))
+		std::cout << "Unable to load assets/model/cube.json" << std::endl;
+	scene.boxVAO = createVAO(boxMesh);
+
+	if (!loadModelFromFile("assets/model/sphere.json", sphereMesh))
+		std::cout << "Unable to load assets/model/sphere.json" << std::endl;
+	scene.sphereVAO = createVAO(sphereMesh);
 
     // Create the FINAL shader program from source code files.
     scene.shaderFINAL.CreateProgram();
@@ -135,47 +153,7 @@ void InitializeScene(Scene &scene)
 	CHECKERROR;
 }
 
-////////////////////////////////////////////////////////////////////////
-// A small helper function for DrawScene to draw all the environment
-// spheres.
-void DrawSpheres(Scene &scene, unsigned int program, glm::mat4x4& RA)
-{
-	CHECKERROR;
-    float t = 1.0;
-    float s = 200.0;
-	float color[3];
-    
-	int loc = glGetUniformLocation(program, "ModelMatrix"); 
-	int dloc = glGetUniformLocation(program, "phongDiffuse");
-	int nloc = glGetUniformLocation(program, "NormalMatrix");
-	
-    for (int i=0;  i<2*scene.nSpheres;  i+=2) {
-		float u = float(i)/(2*scene.nSpheres);
-		
-		for (int j=0;  j<=scene.nSpheres/2;  j+=2) {
-			float v = float(j)/(scene.nSpheres);
-			HSV2RGB(u, 1.0-2.0*fabs(v-0.5), 1.0, color);
-					
-			float s = 3.0* sin(v*3.14);
-			// Set each sphere's modeling transformation
-			glm::mat4x4 M1 = glm::rotate(RA, 360.0f*u, 0.0f, 0.0f, 1.0f);
-			glm::mat4x4 M2 = glm::rotate(M1, 180.0f*v, 0.0f, 1.0f, 0.0f);
-			glm::mat4x4 M3 = glm::translate(M2, 0.0f, 0.0f, 30.0f);
-			glm::mat4x4 M4 = glm::scale(M3, s,s,s);
-			glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(M4));
 
-			// And its inverse (for normal vector transformations)
-			glm::mat4x4 NRM = glm::inverseTranspose(M4);
-			glUniformMatrix4fv(nloc, 1, GL_FALSE, glm::value_ptr(NRM));
-
-			glUniform3fv(dloc, 1, color);
-			glBindVertexArray(scene.sphereVAO);
-			glDrawElements(GL_QUADS, scene.sphereCount, GL_UNSIGNED_INT, 0);
-			glBindVertexArray(0); } }
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(glm::mat4x4(1.0)));
-    glUniformMatrix4fv(nloc, 1, GL_FALSE, glm::value_ptr(glm::mat4x4(1.0)));
-	CHECKERROR;
-}
 
 ////////////////////////////////////////////////////////////////////////
 // Called regularly to update the rotation of the surrounding sphere
@@ -212,7 +190,7 @@ void DrawScene(Scene &scene)
 
     // Set the viewport, and clear the screen
     glViewport(0,0,scene.width, scene.height);
-    glClearColor(0.5,0.5, 0.5, 1.0);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 
 	// Use the shader program
@@ -233,9 +211,11 @@ void DrawScene(Scene &scene)
     glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(P));
 
 	// Build a simple viewing matrix and send to the shader
-	glm::mat4x4 V1 = glm::translate(scene.translatex, scene.translatey, -scene.zoom);
+	global::gEditorCamera.update();
+	/*glm::mat4x4 V1 = glm::translate(scene.translatex, scene.translatey, -scene.zoom);
 	glm::mat4x4 V2 = glm::rotate(V1, scene.eyeTilt, 1.0f, 0.0f, 0.0f);
-	glm::mat4x4 V3 = glm::rotate(V2, scene.eyeSpin, 0.0f, 0.0f, 1.0f);
+	glm::mat4x4 V3 = glm::rotate(V2, scene.eyeSpin, 0.0f, 0.0f, 1.0f);*/
+	glm::mat4x4 V3 = global::gEditorCamera.getViewMtx();
     loc = glGetUniformLocation(scene.shaderFINAL.program, "ViewMatrix");
     glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(V3)); 
 	
@@ -293,20 +273,33 @@ void DrawScene(Scene &scene)
 	////////////////////////////////////////////////////////////////////////
 	
 	// Draw the ground plane
+	float scale = 100.f;
+	glm::mat4 scaleMtx = glm::scale(glm::vec3(scale, 1.f, scale));
+	//glm::mat4 rotateMtx = glm::rotate(90.f, glm::vec3(1,0,0));
+	glm::mat4 TranslateMtx = glm::translate(glm::vec3(0, 0, 0));
+	glm::mat4x4 ModelMtx = TranslateMtx * scaleMtx;
+	loc = glGetUniformLocation(scene.shaderFINAL.program, "ModelMatrix");
 	glBindVertexArray(scene.groundVAO);
-	glDrawElements(GL_QUADS, scene.groundCount, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, groundMesh.faces.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 	CHECKERROR;
 
-	// Draw the teapot
-	glBindVertexArray(scene.teapotVAO);
-	glDrawElements(GL_QUADS, scene.teapotCount, GL_UNSIGNED_INT, 0);
+
+	// draw box
+	scale = 5.f;
+	scaleMtx = glm::scale(glm::vec3(scale, scale, scale));
+	TranslateMtx = glm::translate(glm::vec3(0, 0, 5));
+	ModelMtx = TranslateMtx * scaleMtx;
+	loc = glGetUniformLocation(scene.shaderFINAL.program, "ModelMatrix");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(ModelMtx));
+
+	int dloc = glGetUniformLocation(scene.shaderFINAL.program, "phongDiffuse");
+	glm::vec3 boxDiffuse(1.f, 0.f, 0.f);
+	glUniform3fv(dloc, 1, glm::value_ptr(boxDiffuse));
+
+	glBindVertexArray(scene.boxVAO);
+	glDrawElements(GL_TRIANGLES, boxMesh.faces.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
-	CHECKERROR;
-    
-	// Draw the sphere of spheres surrounding environment 
-	// (Each one sets its own color)
-	DrawSpheres(scene, scene.shaderFINAL.program, RA);
 	CHECKERROR;
 	
 	// A small white sphere (translated to the correct position) represents the light.
@@ -320,7 +313,7 @@ void DrawScene(Scene &scene)
 	CHECKERROR;
 
 	glBindVertexArray(scene.sphereVAO);
-	glDrawElements(GL_QUADS, scene.sphereCount, GL_UNSIGNED_INT, 0); // Draws light
+	glDrawElements(GL_TRIANGLES, sphereMesh.faces.size(), GL_UNSIGNED_INT, 0); // Draws light
 	glBindVertexArray(0);
 	CHECKERROR;
 

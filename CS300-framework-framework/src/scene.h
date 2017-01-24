@@ -12,6 +12,8 @@
 // others are set by the framework in response to user mouse/keyboard
 // interactions.  All of them should be used to draw the scene.
 
+#include "ambientLight.h"
+
 class Scene
 {
 public:
@@ -28,6 +30,12 @@ public:
     float translatey;
     float zoom;
 
+	float cameraAngle;
+	float cameraFi;
+	float cameraRadius;
+	glm::vec3 cameraLookAt;
+
+
     // Light position parameters;  Mouse buttons SHIFT 1-3
     float lightSpin;
     float lightTilt;
@@ -40,6 +48,8 @@ public:
 	unsigned int sphereVAO, sphereCount;
 	unsigned int teapotVAO, teapotCount;
 	unsigned int groundVAO, groundCount;
+	unsigned int boxVAO;
+	ambientLight mAmbientLight;
 
 	// Shader programs
 	ShaderProgram shaderFINAL;

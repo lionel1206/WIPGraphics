@@ -25,11 +25,16 @@
 
 #include "models.h"
 #include <fstream>
+#include <sstream>
 #include <stdlib.h>
 #include <glload/gl_3_3.h>
 #include <glload/gll.hpp>
 
 #include "math.h"
+
+#include "document.h"
+#include "reader.h"
+#include <istreamwrapper.h>
 const float PI = 3.14159f;
 const float rad = PI/180.0f;
 
@@ -619,5 +624,128 @@ unsigned int CreateGround(const float r, const int n, unsigned int& count)
 	
 	GLuint vao = VaoFromArrays(nv, nq, Pnt, Nrm, Tex, Tan, Ind);
 	count = 4*nq;
+	return vao;
+}
+
+bool loadModelFromFile(const char *path, meshData &mesh)
+{
+	std::ifstream ifs(path, std::ifstream::in | std::ifstream::binary);
+	if (!ifs.is_open())
+	{
+		std::cout << "Error is opening file " << path << std::endl;
+		return false;
+	}
+		
+	rapidjson::IStreamWrapper isw(ifs);
+
+	rapidjson::Document d;
+	auto& jsonDoc = d.ParseStream(isw);
+	std::cout << "Model file: " << jsonDoc["ModelFile"].GetString() << std::endl;
+	mesh.meshName = jsonDoc["MeshName"].GetString();
+	std::cout << "Mesh name: " << mesh.meshName << std::endl;
+	const rapidjson::Value& meshVertices = jsonDoc["Vertices"];
+	for (int i = 0; i < meshVertices.Size(); ++i)
+	{
+		const rapidjson::Value& currentVert = meshVertices[i];
+		glm::vec3 vert(currentVert[0].GetDouble(),
+			currentVert[1].GetDouble(),
+			currentVert[2].GetDouble());
+		mesh.verts.push_back(vert);
+	}
+	
+	auto meshIndices = jsonDoc["Indices"].GetArray();
+	for (unsigned int i = 0; i < meshIndices.Size(); ++i)
+	{
+		mesh.faces.push_back(meshIndices[i].GetUint());
+	}
+
+	auto meshNormals = jsonDoc["Normals"].GetArray();
+	for (unsigned int i = 0; i < meshNormals.Size(); ++i)
+	{
+		glm::vec3 normal(meshNormals[i][0].GetDouble(),
+			meshNormals[i][1].GetDouble(),
+			meshNormals[i][2].GetDouble());
+		mesh.normals.push_back(normal);
+	}
+
+	auto meshTexCoord = jsonDoc["TexCoords"].GetArray();
+	for (unsigned int i = 0; i < meshTexCoord.Size(); ++i)
+	{
+		glm::vec3 uv(meshTexCoord[i][0].GetDouble(),
+			meshTexCoord[i][1].GetDouble(),
+			meshTexCoord[i][2].GetDouble());
+		mesh.uvs.push_back(uv);
+	}
+
+	auto meshTangents = jsonDoc["Tangents"].GetArray();
+	for (unsigned int i = 0; i < meshTangents.Size(); ++i)
+	{
+		glm::vec3 tan(meshTangents[i][0].GetDouble(),
+			meshTangents[i][1].GetDouble(),
+			meshTangents[i][2].GetDouble());
+		mesh.tans.push_back(tan);
+	}
+
+	auto meshBiTans = jsonDoc["BiTangents"].GetArray();
+	for (unsigned int i = 0; i < meshBiTans.Size(); ++i)
+	{
+		glm::vec3 biTan(meshBiTans[i][0].GetDouble(),
+			meshBiTans[i][1].GetDouble(),
+			meshBiTans[i][2].GetDouble());
+		mesh.biTans.push_back(biTan);
+	}
+
+	return true;
+}
+
+unsigned int createVAO(meshData& mesh)
+{
+	unsigned int vao;
+
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	unsigned int vertices;
+	glGenBuffers(1, &vertices);
+	glBindBuffer(GL_ARRAY_BUFFER, vertices);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.verts.size(), &mesh.verts.front(), GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	unsigned int normals;
+	glGenBuffers(1, &normals);
+	glBindBuffer(GL_ARRAY_BUFFER, normals);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.normals.size(), &mesh.normals.front(), GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+
+	unsigned int indicies;
+	glGenBuffers(1, &indicies);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicies);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * mesh.faces.size(), &mesh.faces.front(), GL_STATIC_DRAW);
+	
+	unsigned int uv;
+	glGenBuffers(1, &uv);
+	glBindBuffer(GL_ARRAY_BUFFER, uv);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.uvs.size(), &mesh.uvs.front(), GL_STATIC_DRAW);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(2);
+
+	unsigned int tan;
+	glGenBuffers(1, &tan);
+	glBindBuffer(GL_ARRAY_BUFFER, tan);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.tans.size(), &mesh.tans.front(), GL_STATIC_DRAW);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(3);
+
+	unsigned int bitan;
+	glGenBuffers(1, &bitan);
+	glBindBuffer(GL_ARRAY_BUFFER, bitan);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.biTans.size(), &mesh.biTans.front(), GL_STATIC_DRAW);
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(4);
+
+	glBindVertexArray(0);
+
 	return vao;
 }

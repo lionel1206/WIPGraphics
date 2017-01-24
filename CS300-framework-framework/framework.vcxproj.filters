@@ -13,6 +13,18 @@
     <Filter Include="utility">
       <UniqueIdentifier>{c4c56dc4-5996-474a-bd59-c74c0d7246f5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="objects">
+      <UniqueIdentifier>{97754f68-68c7-4484-82fb-bfa05f53563b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="colliders">
+      <UniqueIdentifier>{5de87e55-4b25-4464-9f8b-686adf058b25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lights">
+      <UniqueIdentifier>{81a5c02d-972f-440a-aa64-40dda6767ed3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="camera">
+      <UniqueIdentifier>{3b14b2ce-b9fe-48f3-8663-149f3c79c9c5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\fbo.cpp">
@@ -32,6 +44,21 @@
     </ClCompile>
     <ClCompile Include="src\timer.cpp">
       <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ambientLight.cpp">
+      <Filter>lights</Filter>
+    </ClCompile>
+    <ClCompile Include="src\light.cpp">
+      <Filter>lights</Filter>
+    </ClCompile>
+    <ClCompile Include="src\boxCollider.cpp">
+      <Filter>colliders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\object.cpp">
+      <Filter>objects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\camera.cpp">
+      <Filter>camera</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -53,23 +80,32 @@
     <ClInclude Include="src\globals.h">
       <Filter>globals</Filter>
     </ClInclude>
-    <ClInclude Include="src\object.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\light.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ambientLight.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\collider.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\ray.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\singleton.h">
+      <Filter>globals</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ambientLight.h">
+      <Filter>lights</Filter>
+    </ClInclude>
+    <ClInclude Include="src\light.h">
+      <Filter>lights</Filter>
+    </ClInclude>
     <ClInclude Include="src\boxCollider.h">
-      <Filter>src</Filter>
+      <Filter>colliders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\collider.h">
+      <Filter>colliders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\object.h">
+      <Filter>objects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\camera.h">
+      <Filter>camera</Filter>
+    </ClInclude>
+    <ClInclude Include="src\graphicObject.h">
+      <Filter>objects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

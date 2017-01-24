@@ -17,10 +17,3 @@ private:
 	glm::vec3 max;
 };
 
-boxCollider::boxCollider()
-{
-}
-
-boxCollider::~boxCollider()
-{
-}

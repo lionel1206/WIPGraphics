@@ -11,9 +11,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\ambientLight.cpp" />
+    <ClCompile Include="src\boxCollider.cpp" />
+    <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\fbo.cpp" />
     <ClCompile Include="src\framework.cpp" />
+    <ClCompile Include="src\light.cpp" />
     <ClCompile Include="src\models.cpp" />
+    <ClCompile Include="src\object.cpp" />
     <ClCompile Include="src\scene.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\timer.cpp" />
@@ -21,10 +26,13 @@
   <ItemGroup>
     <ClInclude Include="src\ambientLight.h" />
     <ClInclude Include="src\boxCollider.h" />
+    <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\collider.h" />
     <ClInclude Include="src\fbo.h" />
     <ClInclude Include="src\globals.h" />
+    <ClInclude Include="src\graphicObject.h" />
     <ClInclude Include="src\light.h" />
+    <ClInclude Include="src\singleton.h" />
     <ClInclude Include="src\models.h" />
     <ClInclude Include="src\object.h" />
     <ClInclude Include="src\ray.h" />
@@ -83,7 +91,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>middleware\glload\include;middleware\glimg\include;middleware\glutil\include;middleware\glmesh\include;middleware\glm;middleware\freeglut\include;middleware\glfw\include;middleware\antweakbar\include;middleware\SOIL\include;middleware\glew\include;middleware\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>middleware\glload\include;middleware\glimg\include;middleware\glutil\include;middleware\glmesh\include;middleware\glm;middleware\freeglut\include;middleware\glfw\include;middleware\antweakbar\include;middleware\SOIL\include;middleware\glew\include;middleware\assimp\include;middleware\rapidjson\include;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;FREEGLUT_STATIC;_LIB;FREEGLUT_LIB_PRAGMAS=0;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -110,7 +118,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>middleware\glload\include;middleware\glimg\include;middleware\glutil\include;middleware\glmesh\include;middleware\glm;middleware\freeglut\include;middleware\glfw\include;middleware\antweakbar\include;middleware\SOIL\include;middleware\glew\include;middleware\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>middleware\glload\include;middleware\glimg\include;middleware\glutil\include;middleware\glmesh\include;middleware\glm;middleware\freeglut\include;middleware\glfw\include;middleware\antweakbar\include;middleware\SOIL\include;middleware\glew\include;middleware\assimp\include;middleware\rapidjson\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;FREEGLUT_STATIC;_LIB;FREEGLUT_LIB_PRAGMAS=0;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>

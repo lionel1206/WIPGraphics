@@ -149,8 +149,12 @@ void MouseMotion(int x, int y)
     if (middleDown && shifted) {
         scene.lightDist = pow(scene.lightDist, 1.0f-dy/200.0f);  }
 
-    else if (middleDown) {
-        scene.zoom += dy/10.0f; }
+    else if (middleDown) 
+	{
+        scene.zoom += dy/10.0f; 
+		scene.cameraRadius += dy / 10.f;
+		global::gEditorCamera.setRadius(scene.cameraRadius);
+	}
 
 
     if (rightDown && shifted) {

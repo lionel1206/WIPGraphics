@@ -23,6 +23,26 @@
 // Copyright 2013 DigiPen Institute of Technology
 ////////////////////////////////////////////////////////////////////////
 
+#include <string>
+#include <vector>
+
+#include "glm\ext.hpp"
+
+struct meshData
+{
+	std::string meshName;
+	std::vector<glm::vec3> uvs;
+	std::vector<glm::vec3> verts;
+	std::vector<unsigned int> faces;
+	std::vector<glm::vec3> normals;
+	std::vector<glm::vec3> tans;
+	std::vector<glm::vec3> biTans;
+};
+
+typedef std::vector<meshData> modelData;
+
+bool loadModelFromFile(const char *path, meshData &mesh);
+unsigned int createVAO(meshData& mesh);
 unsigned int CreateTeapot(const int n,  unsigned int& count);
 unsigned int CreateSphere(const int n,  unsigned int& count);
 unsigned int CreateGround(const float range, const int n,  unsigned int& count);
