@@ -9,7 +9,7 @@ public:
 	~boxCollider();
 
 	void createCollisionVolume(glm::vec3 *vertices, int count);
-	bool intersect(ray &inRay);
+	bool intersect(ray &inRay, float& t);
 	void update(glm::mat4 modelToWorldMtx);
 
 private:

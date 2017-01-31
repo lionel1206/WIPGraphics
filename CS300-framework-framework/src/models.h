@@ -22,7 +22,7 @@
 //
 // Copyright 2013 DigiPen Institute of Technology
 ////////////////////////////////////////////////////////////////////////
-
+#pragma once
 #include <string>
 #include <vector>
 

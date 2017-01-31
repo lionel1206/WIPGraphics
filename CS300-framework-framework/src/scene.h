@@ -13,14 +13,16 @@
 // interactions.  All of them should be used to draw the scene.
 
 #include "ambientLight.h"
+#include "pointLight.h"
+#include "directionalLight.h"
+#include "camera.h"
+#include "graphicObject.h"
+#include "lightManager.h"
+#include <vector>
 
 class Scene
 {
 public:
-    // Some user controllable parameters
-    int mode;  // Communicated to the shaders as "mode".  Keys '0'-'9'
-	int nSpheres;
-	int diffFlag, specFlag, texFlag, shadowFlag, bumpFlag, reflFlag, fullonFlag;
 
     // Viewing transformation parameters;  Mouse buttons 1-3
     float front;
@@ -29,11 +31,6 @@ public:
     float translatex;
     float translatey;
     float zoom;
-
-	float cameraAngle;
-	float cameraFi;
-	float cameraRadius;
-	glm::vec3 cameraLookAt;
 
 
     // Light position parameters;  Mouse buttons SHIFT 1-3
@@ -47,13 +44,29 @@ public:
 	// Objects in the scene
 	unsigned int sphereVAO, sphereCount;
 	unsigned int teapotVAO, teapotCount;
-	unsigned int groundVAO, groundCount;
-	unsigned int boxVAO;
+	unsigned int groundVAO, groundTexture;
+	unsigned int boxVAO, boxTexture;
+	unsigned int planeVAO, planceTexture;
+	unsigned int skyBoxTexture;
+	camera gEditorCamera;
+	glm::mat4 perspectiveMtx;
 	ambientLight mAmbientLight;
+	pointLight ptLight;
+	directionalLight dirLight;
+	float fovDeg;
+	float nearplane, farplane;
 
+	ShaderProgram shaderLibrary[global::eLightingType::MAX_LIGHTING_COUNT][global::eObjectMaterialType::MAX_MATERIAL_COUNT];
 	// Shader programs
 	ShaderProgram shaderFINAL;
-
+	std::vector<graphicObject> graphicsObjectContainer;
+	std::vector<pointLight> pointLightContainer;
+	pointLightParamContainter pointLightParameters;
+	std::vector<directionalLight> directionalLightContainer;
+	directionLightParamContainter directionalLightParameters;
+	ambientLightParam ambientLightParameters;
+	lightManager mLightManager;
+	int shadowMapWidth, shadowMapHeight;
 };
 
 void InitializeScene(Scene &scene);

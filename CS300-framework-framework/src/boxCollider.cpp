@@ -15,7 +15,7 @@ void boxCollider::createCollisionVolume(glm::vec3 *vertices, int count)
 
 }
 
-bool boxCollider::intersect(ray &inRay)
+bool boxCollider::intersect(ray &inRay, float& t)
 {
 	return false;
 }

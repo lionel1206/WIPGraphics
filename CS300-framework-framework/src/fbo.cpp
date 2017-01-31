@@ -13,8 +13,7 @@
 #include "shader.h"
 #include "fbo.h"
 #include "scene.h"
-#include <glload/gl_3_3.h>
-#include <glload/gll.hpp>
+#include "GL\glew.h"
 #include <GL/freeglut.h>
 
 void FBO::CreateFBO(const int w, const int h)

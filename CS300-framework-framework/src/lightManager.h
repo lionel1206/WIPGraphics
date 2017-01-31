@@ -1,26 +1,46 @@
 #pragma once
 
 #include <vector>
+#include "pointLight.h"
+#include "directionalLight.h"
 
-class light;
+struct ambientLightParam
+{
+	glm::vec3 ambientLightColor;
+	float ambientLightStrength;
+};
+
+struct directionalLightParam
+{
+	glm::vec3 directionLightDir;
+	glm::vec3 directionLightDiffuse;
+	glm::vec3 directionLightSpecular;
+};
+
+struct pointLightParam
+{
+	glm::vec3 pointLightPosition;
+	glm::vec3 pointLightDiffuse;
+	glm::vec3 pointLightSpecular;
+	float pointLightAttenuationDistance;
+	float pointLightAttenuationConstanst;
+	float pointLightAttenuationLinear;
+	float pointLightAttenuationQuadratic;
+};
+
+typedef std::vector<pointLightParam> pointLightParamContainter;
+typedef std::vector<directionalLightParam> directionLightParamContainter;
 
 class lightManager
 {
 public:
-	static lightManager* getSingleTon();
-	~lightManager();
-
-private:
 	lightManager();
-	lightManager* pLightMgr;
-	typedef std::vector<light> lightContainer;
-	lightContainer mLightContainer;
+	lightManager(std::vector<pointLight>& ptLights, std::vector<directionalLight>& dirLights);
+	~lightManager();
+	void updateLightParameters(pointLightParamContainter& ptLightParams, directionLightParamContainter& directionalLightParameters);
+	void pushLightInfoToGPU(unsigned int shader);
+	void drawLight(unsigned int shader);
+private:
+	std::vector<pointLight> pointLightContainer;
+	std::vector<directionalLight> directionalLightContainer;
 };
-
-lightManager::lightManager()
-{
-}
-
-lightManager::~lightManager()
-{
-}

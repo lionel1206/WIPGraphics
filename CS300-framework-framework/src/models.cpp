@@ -27,8 +27,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdlib.h>
-#include <glload/gl_3_3.h>
-#include <glload/gll.hpp>
+#include "GL\glew.h"
 
 #include "math.h"
 
@@ -711,6 +710,7 @@ unsigned int createVAO(meshData& mesh)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.verts.size(), &mesh.verts.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	unsigned int normals;
 	glGenBuffers(1, &normals);
@@ -718,11 +718,7 @@ unsigned int createVAO(meshData& mesh)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.normals.size(), &mesh.normals.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(1);
-
-	unsigned int indicies;
-	glGenBuffers(1, &indicies);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicies);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * mesh.faces.size(), &mesh.faces.front(), GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
 	unsigned int uv;
 	glGenBuffers(1, &uv);
@@ -730,6 +726,7 @@ unsigned int createVAO(meshData& mesh)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.uvs.size(), &mesh.uvs.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	unsigned int tan;
 	glGenBuffers(1, &tan);
@@ -737,6 +734,7 @@ unsigned int createVAO(meshData& mesh)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.tans.size(), &mesh.tans.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(3);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	unsigned int bitan;
 	glGenBuffers(1, &bitan);
@@ -744,6 +742,12 @@ unsigned int createVAO(meshData& mesh)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * mesh.biTans.size(), &mesh.biTans.front(), GL_STATIC_DRAW);
 	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(4);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	unsigned int indicies;
+	glGenBuffers(1, &indicies);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indicies);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * mesh.faces.size(), &mesh.faces.front(), GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
 

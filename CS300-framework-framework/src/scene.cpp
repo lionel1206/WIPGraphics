@@ -18,17 +18,19 @@
 #include "scene.h"
 #include "models.h"
 #include "globals.h"
+#include "timer.h"
 
 #include "math.h"
 #include <fstream>
 #include <stdlib.h>
 
-#include <glload/gl_3_3.h>
-#include <glload/gll.hpp>
+#include "SOIL.h"
+
+#include "GL\glew.h"
 #include <GL/freeglut.h>
-#include "glimg/glimg.h"
 #include "glm\ext.hpp"
 #include "glm\gtc\matrix_inverse.hpp"
+
 
 ////////////////////////////////////////////////////////////////////////
 // This macro make sit easy to sprinkle checkd for OpenGL errors
@@ -40,45 +42,64 @@
 
 
 float ambientColor[3] = {0.5f, 0.5f, 0.5f};
-float lightColor[3] = {0.8f, 0.8f, 0.8f};
+float lightColor[3] = {0.5f, 0.5f, 0.5f};
 
 float whiteColor[3] = {1.0f, 1.0f, 1.0f};
 float blackColor[3] = {0.0f, 0.0f, 0.0f};
 float diffuseColor[3] = {0.5f, 0.34f, 0.1f};
 float specularColor[3] = {1.0f, 1.0f, 1.0f};
-int shininess = 120;
+float shininess = 240;
 
 const float PI = 3.14159f;
 const float rad = PI/180.0f;
 meshData boxMesh, sphereMesh, groundMesh;
-////////////////////////////////////////////////////////////////////////
-// A small function to provide a more friendly method of defining
-// colors.  The parameters are hue (0..1: fraction of distance around
-// the color wheel; red at 0, green at 1/3, blue at 2/3), saturation
-// (0..1: achromatic to saturated), and value (0..1: brightness).
-#define ret(r,g,b) {c[0]=r; c[1]=g; c[2]=b; }
-void HSV2RGB(const float h, const float s, const float v, float *c)
+
+unsigned int loadCube(const std::vector<const char*> &facePath)
 {
-	if (s == 0.0)
-		ret(v,v,v)
-	else {
-		int i = (int)(h*6.0);
-		float f = (h*6.0f) - i;
-		float p = v*(1.0f - s);
-		float q = v*(1.0f - s*f);
-		float t = v*(1.0f - s*(1.0f-f));
-		if (i%6 == 0)
-			ret(v,t,p)
-		else if (i == 1)
-			ret(q,v,p)
-		else if (i == 2)
-			ret(p,v,t)
-		else if (i == 3)
-			ret(p,q,v)
-		else if (i == 4)
-			ret(t,p,v)
-		else if (i == 5)
-			ret(v,p,q) }
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+	glActiveTexture(GL_TEXTURE0);
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+	for (unsigned int i = 0; i < facePath.size(); ++i)
+	{
+		int width, height, channel;
+		unsigned char *image = SOIL_load_image(facePath[i], &width, &height, &channel, SOIL_LOAD_RGBA);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+	return textureID;
+}
+
+unsigned int loadTexture(const char* path)
+{
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_2D, textureID); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
+													   // Set our texture parameters
+	CHECKERROR;
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// Set texture wrapping to GL_REPEAT
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// Set texture filtering
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	int width, height;
+	unsigned char* image = SOIL_load_image(path, &width, &height, 0, SOIL_LOAD_RGBA);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	SOIL_free_image_data(image);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	CHECKERROR;
+
+	return textureID;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -88,38 +109,17 @@ void HSV2RGB(const float h, const float s, const float v, float *c)
 void InitializeScene(Scene &scene)
 {
 	CHECKERROR;
-    scene.mode = 0;
-    scene.nSpheres = 16;
 
-	scene.diffFlag=1;
-	scene.specFlag=2;
-	scene.texFlag=4;
-	scene.shadowFlag=8;
-	scene.bumpFlag=16;
-	scene.reflFlag=32;
-	scene.fullonFlag=64;
+	scene.shadowMapWidth = 1280;
+	scene.shadowMapHeight = 720;
 
-    // Set the initial viewing transformation parameters
-    scene.front = 1.0;
-    scene.eyeSpin = -150.0;
-    scene.eyeTilt = -60.0;
-    scene.translatex = 0.0;
-    scene.translatey = -1.0;
-    scene.zoom = 30.0;
+	scene.gEditorCamera.initialize(glm::vec3(0,50,-100),
+									 glm::vec3(0, 0, 0));
 
-	scene.cameraAngle = 45.f;
-	scene.cameraFi = 45.f;
-	scene.cameraRadius = 50.f;
-	scene.cameraLookAt = glm::vec3(0, 0, 0);
-	global::gEditorCamera.initialize(scene.cameraAngle,
-		                             scene.cameraFi,
-		                             scene.cameraRadius,
-		                             scene.cameraLookAt);
-
-    // Set the initial light position parammeters
-    scene.lightSpin = -90;
-    scene.lightTilt = -60.0;
-    scene.lightDist = 60.0;
+	scene.mAmbientLight.setAmbientColor(glm::vec3(1.f, 1.f, 1.f));
+	scene.mAmbientLight.setAmbientStrength(0.2f);
+	scene.ambientLightParameters.ambientLightColor = scene.mAmbientLight.getAmbientColor();
+	scene.ambientLightParameters.ambientLightStrength = scene.mAmbientLight.getAmbientStrength();
     
     // Enable OpenGL depth-testing
     glEnable(GL_DEPTH_TEST);
@@ -133,200 +133,214 @@ void InitializeScene(Scene &scene)
 		std::cout << "Unable to load assets/model/cube.json" << std::endl;
 	scene.boxVAO = createVAO(boxMesh);
 
+	
+
+	glm::vec3 ptLightPosition[] = { glm::vec3(100, 85, -50), glm::vec3(0, 85, 50), glm::vec3(-100, 85, -50) };
+	glm::vec4 ptLightAttenuation[] = { glm::vec4(325, 1.0, 0.014, 0.0007), glm::vec4(600, 1.0, 0.007, 0.0002), glm::vec4(160, 1.0, 0.027, 0.0028) };
+	glm::vec3 ptLightColor[] = { glm::vec3(0,1,0), glm::vec3(1,0,0) , glm::vec3(0,0,1) };
+	int MAX_POINT_LIGHT = 3;
+	for (int i = 0; i < MAX_POINT_LIGHT; ++i)
+	{
+		pointLight ptLight = pointLight(ptLightPosition[i], scene.boxVAO, boxMesh.faces.size());
+		ptLight.setLightColor(ptLightColor[i]);
+		ptLight.setSpecularColor(ptLightColor[i]);
+		ptLight.setLightIndex(i);
+		ptLight.setAttenuationParameters(ptLightAttenuation[1].x, ptLightAttenuation[1].y, 
+									     ptLightAttenuation[1].z, ptLightAttenuation[1].w);
+
+		pointLightParam ptLightParam;
+		ptLightParam.pointLightPosition = ptLightPosition[i];
+		ptLightParam.pointLightDiffuse = ptLightColor[i];
+		ptLightParam.pointLightSpecular = ptLightColor[i];
+		ptLightParam.pointLightAttenuationDistance = ptLightAttenuation[1].x;
+		ptLightParam.pointLightAttenuationConstanst = ptLightAttenuation[1].y;
+		ptLightParam.pointLightAttenuationLinear = ptLightAttenuation[1].z;
+		ptLightParam.pointLightAttenuationQuadratic = ptLightAttenuation[1].w;
+		scene.pointLightContainer.push_back(ptLight);
+		scene.pointLightParameters.push_back(ptLightParam);
+	}
+
+	directionalLight dirLight = directionalLight(glm::vec3(1, 0, 0));
+	directionalLightParam dirLightParam;
+	dirLightParam.directionLightDiffuse = dirLight.getDiffuseColor();
+	dirLightParam.directionLightDir = dirLight.getLightDirection();
+	dirLightParam.directionLightSpecular = dirLight.getSpecularColor();
+	scene.directionalLightContainer.push_back(dirLight);
+	scene.directionalLightParameters.push_back(dirLightParam);
+	
+	scene.mLightManager = lightManager(scene.pointLightContainer, scene.directionalLightContainer);
+
+	scene.groundTexture = loadTexture("assets/texture/floor_diffuse.png");
+	scene.boxTexture = loadTexture("assets/texture/crate_diffuse.png");
+
 	if (!loadModelFromFile("assets/model/sphere.json", sphereMesh))
 		std::cout << "Unable to load assets/model/sphere.json" << std::endl;
 	scene.sphereVAO = createVAO(sphereMesh);
 
+	std::vector<const char*> skyBoxTexturePaths = { "assets/texture/skybox_right.tga", "assets/texture/skybox_left.tga",
+		                                            "assets/texture/skybox_up.tga", "assets/texture/skybox_down.tga", 
+		                                            "assets/texture/skybox_back.tga", "assets/texture/skybox_front.tga", };
+	scene.skyBoxTexture = loadCube(skyBoxTexturePaths);
+
     // Create the FINAL shader program from source code files.
-    scene.shaderFINAL.CreateProgram();
-    scene.shaderFINAL.CreateShader("shaders\\final.vert", GL_VERTEX_SHADER);
-    scene.shaderFINAL.CreateShader("shaders\\phong.vert", GL_VERTEX_SHADER);
+	scene.shaderFINAL.CreateProgram();
+	scene.shaderFINAL.CreateShader("shaders/phong_Color.vert", GL_VERTEX_SHADER);
+	scene.shaderFINAL.CreateShader("shaders/phong_Color.frag", GL_FRAGMENT_SHADER);
 
-    scene.shaderFINAL.CreateShader("shaders\\final.frag", GL_FRAGMENT_SHADER);
-    scene.shaderFINAL.CreateShader("shaders\\phong.frag", GL_FRAGMENT_SHADER);
-	glBindAttribLocation(scene.shaderFINAL.program, 0, "vertex");
-	glBindAttribLocation(scene.shaderFINAL.program, 1, "vertexNormal");
-	glBindAttribLocation(scene.shaderFINAL.program, 2, "vertexTexture");
-	glBindAttribLocation(scene.shaderFINAL.program, 3, "vertexTangent");
-    scene.shaderFINAL.LinkProgram();
-
+	glBindAttribLocation(scene.shaderFINAL.getProgram(), 0, "vertex");
+	glBindAttribLocation(scene.shaderFINAL.getProgram(), 1, "vertexNormal");
+	glBindAttribLocation(scene.shaderFINAL.getProgram(), 2, "vertexTexture");
+	glBindAttribLocation(scene.shaderFINAL.getProgram(), 3, "vertexTangent");
+	scene.shaderFINAL.LinkProgram();
 	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::COLOR] = scene.shaderFINAL;
+
+	// Create the FINAL shader program from source code files.
+	ShaderProgram textureShader;
+	textureShader.CreateProgram();
+	textureShader.CreateShader("shaders/phong_Texture.vert", GL_VERTEX_SHADER);
+	textureShader.CreateShader("shaders/phong_Texture.frag", GL_FRAGMENT_SHADER);
+
+	glBindAttribLocation(textureShader.getProgram(), 0, "vertex");
+	glBindAttribLocation(textureShader.getProgram(), 1, "vertexNormal");
+	glBindAttribLocation(textureShader.getProgram(), 2, "vertexTexture");
+	glBindAttribLocation(textureShader.getProgram(), 3, "vertexTangent");
+	textureShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::TEXTURE] = textureShader;
+
+	ShaderProgram lightShader;
+	lightShader.CreateProgram();
+	lightShader.CreateShader("shaders/drawLight.vert", GL_VERTEX_SHADER);
+	lightShader.CreateShader("shaders/drawLight.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(textureShader.getProgram(), 0, "vertex");
+	lightShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::LIGHT_COLOR] = lightShader;
+
+	ShaderProgram skyboxShader;
+	skyboxShader.CreateProgram();
+	skyboxShader.CreateShader("shaders/skybox.vert", GL_VERTEX_SHADER);
+	skyboxShader.CreateShader("shaders/skybox.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(skyboxShader.getProgram(), 0, "vertex");
+	skyboxShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_SKYBOX] = skyboxShader;
+
+	scene.fovDeg = 45.f;
+	scene.nearplane = 0.1f;
+	scene.farplane = 20000.f;
+	scene.perspectiveMtx = glm::perspective(scene.fovDeg, global::gWidth / global::gHeight,
+											scene.nearplane, scene.farplane);
+
+	graphicObject groundObject(glm::vec3(0.f, 0.f, 0.f), glm::vec3(), glm::vec3(250,1,250), scene.groundVAO, groundMesh.faces.size());
+	//groundObject.setColor(glm::vec3(diffuseColor[0], diffuseColor[1], diffuseColor[2]));
+	groundObject.setTextureMap(scene.groundTexture); 
+	scene.graphicsObjectContainer.push_back(groundObject);
+
+	glm::vec3 boxPosition[27] = { glm::vec3(-35, 15, -35), glm::vec3(0, 15, -35), glm::vec3(35, 15, -35),
+								 glm::vec3(-35, 15, 0), glm::vec3(0, 15, 0), glm::vec3(35, 15, 0),
+		                         glm::vec3(-35, 15, 35), glm::vec3(0, 15, 35), glm::vec3(35, 15, 35),
+
+		                         glm::vec3(-35, 50, -35), glm::vec3(0, 50, -35), glm::vec3(35, 50, -35),
+		                         glm::vec3(-35, 50, 0), glm::vec3(0, 50, 0), glm::vec3(35, 50, 0),
+		                         glm::vec3(-35, 50, 35), glm::vec3(0, 50, 35), glm::vec3(35, 50, 35),
+
+		                         glm::vec3(-35, 85, -35), glm::vec3(0, 85, -35), glm::vec3(35, 85, -35),
+		                         glm::vec3(-35, 85, 0), glm::vec3(0, 85, 0), glm::vec3(35, 85, 0),
+		                         glm::vec3(-35, 85, 35), glm::vec3(0, 85, 35), glm::vec3(35, 85, 35) };
+	glm::vec3 boxRotation[5] = { glm::vec3(0, 0, 0), glm::vec3(20, 10, 40), glm::vec3(45, 0, 45), glm::vec3(45, 20, 10), glm::vec3(20, 20, 0) };
+	glm::vec3 boxScale = glm::vec3(20, 20, 20);
+	int MAX_BOX = 9;
+	for (int i = 0; i < MAX_BOX; ++i)
+	{
+		graphicObject boxObject(boxPosition[i], glm::vec3(), boxScale, scene.boxVAO, boxMesh.faces.size());
+		boxObject.setTextureMap(scene.boxTexture);
+		scene.graphicsObjectContainer.push_back(boxObject);
+	}
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////
-// Called regularly to update the rotation of the surrounding sphere
-// environment.  Set to rotate once every two minutes.
-float atime = 0.0;
-void animate(int value)
-{
-	atime = 360.0*glutGet(GLUT_ELAPSED_TIME)/120000;
-	glutPostRedisplay();
-}
 
 ////////////////////////////////////////////////////////////////////////
 // Procedure DrawScene is called whenever the scene needs to be drawn.
 void DrawScene(Scene &scene)
 {    
-	CHECKERROR;
-
-	glm::mat4 I(1.0f);
-	glm::mat4x4 RA = glm::rotate(atime, 0.0f, 0.0f, 1.0f);
-
-	glutTimerFunc(100, animate, 1);
-
-    // Calculate the light's position from values controlled by the
-    // user, and tell OpenGL where it is located.
-    float lPos[4] = {
-        scene.lightDist*cos(scene.lightSpin*rad)*sin(scene.lightTilt*rad),
-        scene.lightDist*sin(scene.lightSpin*rad)*sin(scene.lightTilt*rad),
-        scene.lightDist*cos(scene.lightTilt*rad),
-        1.0 };
-
-    ///////////////////////////////////////////////////////////////////
-    // Lighting pass: Draw the scene with lighting calculations.
-    ///////////////////////////////////////////////////////////////////
-
     // Set the viewport, and clear the screen
     glViewport(0,0,scene.width, scene.height);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 
-	// Use the shader program
-	scene.shaderFINAL.Use();
-
-    float sx, sy;
-    sy = 0.2f*scene.front;
-	sx = sy * scene.width/scene.height;
-	CHECKERROR;
-
-	////////////////////////////////////////////////////////////////////////
-	// Send Model, View and Perspective transformations to OpenGL
-	////////////////////////////////////////////////////////////////////////
-	
-	// Create the perspective matrix and send to the shader
-	glm::mat4x4 P = glm::frustum(-sx, sx, -sy, sy, scene.front, 1000.0f);
-    int loc = glGetUniformLocation(scene.shaderFINAL.program, "ProjectionMatrix"); 
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(P));
-
-	// Build a simple viewing matrix and send to the shader
-	global::gEditorCamera.update();
-	/*glm::mat4x4 V1 = glm::translate(scene.translatex, scene.translatey, -scene.zoom);
-	glm::mat4x4 V2 = glm::rotate(V1, scene.eyeTilt, 1.0f, 0.0f, 0.0f);
-	glm::mat4x4 V3 = glm::rotate(V2, scene.eyeSpin, 0.0f, 0.0f, 1.0f);*/
-	glm::mat4x4 V3 = global::gEditorCamera.getViewMtx();
-    loc = glGetUniformLocation(scene.shaderFINAL.program, "ViewMatrix");
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(V3)); 
+	scene.gEditorCamera.update();
+	glm::mat4x4 viewMtx = scene.gEditorCamera.getViewMtx();
 	
 	// Calculate the inverse of the viewing matrix and send to the shader
-	glm::mat4x4 INV = glm::affineInverse(V3);
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "ViewInverse");
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(INV));
+	glm::mat4x4 inverseViewMtx = glm::affineInverse(viewMtx);
 
-    // Initialize the modeling matrix and send to the shader
-    loc = glGetUniformLocation(scene.shaderFINAL.program, "ModelMatrix");
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(I)); 
-    // And its inverse
-    loc = glGetUniformLocation(scene.shaderFINAL.program, "NormalMatrix");
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(I)); 
-	CHECKERROR;
+	glDepthMask(GL_FALSE);
+	ShaderProgram skyboxProgram = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_SKYBOX];
+	skyboxProgram.Use();
+	int loc = glGetUniformLocation(skyboxProgram.getProgram(), "ProjectionMatrix");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
 
-	////////////////////////////////////////////////////////////////////////
-	// Send lighting parameters to OpenGL
-	////////////////////////////////////////////////////////////////////////
-	
-	// Inform the shader of the light's parameters
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "lightAmbient");
-	glUniform3fv(loc, 1, ambientColor);
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "lightPos");
-	glUniform3fv(loc, 1, lPos);
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "lightValue");
-	glUniform3fv(loc, 1, lightColor);
-	CHECKERROR;
+	glm::mat4 skyboxView = glm::mat4(glm::mat3(viewMtx));
+	loc = glGetUniformLocation(skyboxProgram.getProgram(), "ViewMatrix");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(skyboxView));
 
-	// Set a variable that is useful for debugging purposes.
-    loc = glGetUniformLocation(scene.shaderFINAL.program, "mode");
-    glUniform1i(loc, scene.mode);  
-	CHECKERROR; 
-
-	// Tell the shader of the screen width and height (for later use)
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "WIDTH");
-    glUniform1i(loc, scene.width);  
-	CHECKERROR; 
-
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "HEIGHT");
-    glUniform1i(loc, scene.height);
-	CHECKERROR;
-	
-	// Set a boring generic set of phong parameters for the following surface.
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "phongDiffuse");
-	glUniform3fv(loc, 1, diffuseColor);  
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "phongSpecular");
-	glUniform3fv(loc, 1, specularColor);  
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "phongShininess");
-	glUniform1f(loc, shininess);  
-	CHECKERROR;
-
-	////////////////////////////////////////////////////////////////////////
-	// Draw the scene's objects
-	////////////////////////////////////////////////////////////////////////
-	
-	// Draw the ground plane
-	float scale = 100.f;
-	glm::mat4 scaleMtx = glm::scale(glm::vec3(scale, 1.f, scale));
-	//glm::mat4 rotateMtx = glm::rotate(90.f, glm::vec3(1,0,0));
-	glm::mat4 TranslateMtx = glm::translate(glm::vec3(0, 0, 0));
-	glm::mat4x4 ModelMtx = TranslateMtx * scaleMtx;
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "ModelMatrix");
-	glBindVertexArray(scene.groundVAO);
-	glDrawElements(GL_TRIANGLES, groundMesh.faces.size(), GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-	CHECKERROR;
-
-
-	// draw box
-	scale = 5.f;
-	scaleMtx = glm::scale(glm::vec3(scale, scale, scale));
-	TranslateMtx = glm::translate(glm::vec3(0, 0, 5));
-	ModelMtx = TranslateMtx * scaleMtx;
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "ModelMatrix");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(ModelMtx));
-
-	int dloc = glGetUniformLocation(scene.shaderFINAL.program, "phongDiffuse");
-	glm::vec3 boxDiffuse(1.f, 0.f, 0.f);
-	glUniform3fv(dloc, 1, glm::value_ptr(boxDiffuse));
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, scene.skyBoxTexture);
+	loc = glGetUniformLocation(skyboxProgram.getProgram(), "skybox");
+	glUniform1i(loc, 0);
 
 	glBindVertexArray(scene.boxVAO);
 	glDrawElements(GL_TRIANGLES, boxMesh.faces.size(), GL_UNSIGNED_INT, 0);
+	glActiveTexture(GL_TEXTURE0);
 	glBindVertexArray(0);
-	CHECKERROR;
-	
-	// A small white sphere (translated to the correct position) represents the light.
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "phongEmitted");
-	glUniform3fv(loc, 1, whiteColor); // Light emits full-on white
-	CHECKERROR;
+	glDepthMask(GL_TRUE);
 
-	glm::mat4x4 T = glm::translate(lPos[0],lPos[1],lPos[2]); // Translation for light
-    loc = glGetUniformLocation(scene.shaderFINAL.program, "ModelMatrix");
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(T)); 
-	CHECKERROR;
+	scene.mLightManager.updateLightParameters(scene.pointLightParameters, scene.directionalLightParameters);
+	scene.mAmbientLight.setAmbientColor(scene.ambientLightParameters.ambientLightColor);
+	scene.mAmbientLight.setAmbientStrength(scene.ambientLightParameters.ambientLightStrength);
 
-	glBindVertexArray(scene.sphereVAO);
-	glDrawElements(GL_TRIANGLES, sphereMesh.faces.size(), GL_UNSIGNED_INT, 0); // Draws light
-	glBindVertexArray(0);
-	CHECKERROR;
+	for (unsigned int i = 0; i < scene.graphicsObjectContainer.size(); ++i)
+	{
+		auto lightType = global::eLightingType::BLINN_PHONG;
+		auto modelMaterial = scene.graphicsObjectContainer[0].getMaterialType();
+		ShaderProgram currentShader = scene.shaderLibrary[lightType][modelMaterial];
 
-    loc = glGetUniformLocation(scene.shaderFINAL.program, "ModelMatrix");
-    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(I)); // Reset light's translate
-	CHECKERROR;
+		currentShader.Use();
 
-	loc = glGetUniformLocation(scene.shaderFINAL.program, "phongEmitted");
-	glUniform3fv(loc, 1, blackColor); // Turns off emitted light
-	CHECKERROR;
+		loc = glGetUniformLocation(currentShader.getProgram(), "ProjectionMatrix");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
 
-	// Done with shader program
-	scene.shaderFINAL.Unuse();
+		loc = glGetUniformLocation(currentShader.getProgram(), "ViewMatrix");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(viewMtx));
+		CHECKERROR;
+
+		loc = glGetUniformLocation(currentShader.getProgram(), "cameraPos");
+		glUniform3fv(loc, 1, glm::value_ptr(scene.gEditorCamera.getPosition()));
+
+		loc = glGetUniformLocation(currentShader.getProgram(), "ViewInverse");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(inverseViewMtx));
+		CHECKERROR;
+
+		
+		scene.mAmbientLight.updateLightParameter(currentShader.getProgram());
+		scene.mLightManager.pushLightInfoToGPU(currentShader.getProgram());
+		scene.graphicsObjectContainer[i].draw(currentShader.getProgram());
+
+		currentShader.Unuse();
+		CHECKERROR;
+	}
+
+	// draw lights
+	ShaderProgram lightShader = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::LIGHT_COLOR];
+	lightShader.Use();
+	loc = glGetUniformLocation(lightShader.getProgram(), "ProjectionMatrix");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
+	loc = glGetUniformLocation(lightShader.getProgram(), "ViewMatrix");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(viewMtx));
 	CHECKERROR;
-    
+	scene.mLightManager.drawLight(lightShader.getProgram());
+	lightShader.Unuse();
 }

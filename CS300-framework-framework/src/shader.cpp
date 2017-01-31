@@ -12,10 +12,8 @@
 
 #include "shader.h"
 #include <fstream>
-#include <glload/gl_3_3.h>
-#include <glload/gll.hpp>
+#include "GL\glew.h"
 #include <GL/freeglut.h>
-
 // Reads a specified file into a string and returns the string.
 char* ReadFile(const char* name)
 {
@@ -97,3 +95,9 @@ void ShaderProgram::LinkProgram()
         delete buffer;
     }
 }
+
+int ShaderProgram::getProgram()
+{
+	return program;
+}
+

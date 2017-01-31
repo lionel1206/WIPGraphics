@@ -2,12 +2,15 @@ d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\vc140.pdb
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\vc140.idb
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\ambientlight.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\boxcollider.obj
+d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\camera.obj
+d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\directionallight.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\fbo.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\framework.obj
+d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\graphicsobject.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\light.obj
-d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\manager.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\models.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\object.obj
+d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\pointlight.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\scene.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\shader.obj
 d:\assignments\ideaengine\wipgraphics\cs300-framework-framework\debug\timer.obj

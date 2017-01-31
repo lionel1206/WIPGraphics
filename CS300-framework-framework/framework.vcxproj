@@ -14,11 +14,15 @@
     <ClCompile Include="src\ambientLight.cpp" />
     <ClCompile Include="src\boxCollider.cpp" />
     <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\directionalLight.cpp" />
     <ClCompile Include="src\fbo.cpp" />
     <ClCompile Include="src\framework.cpp" />
+    <ClCompile Include="src\graphicsObject.cpp" />
     <ClCompile Include="src\light.cpp" />
+    <ClCompile Include="src\lightManager.cpp" />
     <ClCompile Include="src\models.cpp" />
     <ClCompile Include="src\object.cpp" />
+    <ClCompile Include="src\pointLight.cpp" />
     <ClCompile Include="src\scene.cpp" />
     <ClCompile Include="src\shader.cpp" />
     <ClCompile Include="src\timer.cpp" />
@@ -28,10 +32,13 @@
     <ClInclude Include="src\boxCollider.h" />
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\collider.h" />
+    <ClInclude Include="src\directionalLight.h" />
     <ClInclude Include="src\fbo.h" />
     <ClInclude Include="src\globals.h" />
     <ClInclude Include="src\graphicObject.h" />
     <ClInclude Include="src\light.h" />
+    <ClInclude Include="src\lightManager.h" />
+    <ClInclude Include="src\pointLight.h" />
     <ClInclude Include="src\singleton.h" />
     <ClInclude Include="src\models.h" />
     <ClInclude Include="src\object.h" />
@@ -41,10 +48,16 @@
     <ClInclude Include="src\timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\drawLight.frag" />
+    <None Include="shaders\drawLight.vert" />
     <None Include="shaders\final.frag" />
     <None Include="shaders\final.vert" />
-    <None Include="shaders\phong.frag" />
-    <None Include="shaders\phong.vert" />
+    <None Include="shaders\phong_Color.frag" />
+    <None Include="shaders\phong_Color.vert" />
+    <None Include="shaders\phong_Texture.frag" />
+    <None Include="shaders\phong_Texture.vert" />
+    <None Include="shaders\skybox.frag" />
+    <None Include="shaders\skybox.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{1FBA3F3A-3282-A709-2E8A-1DA52B9CF3A0}</ProjectGuid>
@@ -91,7 +104,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>middleware\glload\include;middleware\glimg\include;middleware\glutil\include;middleware\glmesh\include;middleware\glm;middleware\freeglut\include;middleware\glfw\include;middleware\antweakbar\include;middleware\SOIL\include;middleware\glew\include;middleware\assimp\include;middleware\rapidjson\include;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>middleware\glm;middleware\freeglut\include;middleware\glfw\include;middleware\antweakbar\include;middleware\glew\include;middleware\assimp\include;middleware\rapidjson\include;src;%(AdditionalIncludeDirectories);middleware\DevIL\include;middleware\SOIL\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;FREEGLUT_STATIC;_LIB;FREEGLUT_LIB_PRAGMAS=0;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -102,23 +115,24 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>glload.lib;glimg.lib;glutil.lib;glmesh.lib;freeglut.lib;glu32.lib;opengl32.lib;gdi32.lib;winmm.lib;user32.lib;AntTweakBar.lib;glew32.lib;freeglut_static.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>freeglut.lib;glu32.lib;opengl32.lib;gdi32.lib;winmm.lib;user32.lib;AntTweakBar.lib;glew32.lib;freeglut_static.lib;assimp.lib;SOIL.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalLibraryDirectories>middleware\glload\lib;middleware\glimg\lib;middleware\glutil\lib;middleware\glmesh\lib;middleware\freeglut\lib;middleware\glfw\library;middleware\antweakbar\lib;middleware\glew\lib;middleware\assimp\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>middleware\glload\lib;middleware\glimg\lib;middleware\glutil\lib;middleware\glmesh\lib;middleware\freeglut\lib;middleware\glfw\library;middleware\antweakbar\lib;middleware\glew\lib;middleware\assimp\lib;middleware\DevIL\lib;middleware\SOIL\lib</AdditionalLibraryDirectories>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)middleware\antweakbar\bin\AntTweakBar.dll" "$(TargetDir)"</Command>
+      <Command>copy "$(ProjectDir)middleware\antweakbar\bin\AntTweakBar.dll" "$(TargetDir)"
+copy "$(ProjectDir)middleware\glew\bin\glew32.dll" "$(TargetDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>middleware\glload\include;middleware\glimg\include;middleware\glutil\include;middleware\glmesh\include;middleware\glm;middleware\freeglut\include;middleware\glfw\include;middleware\antweakbar\include;middleware\SOIL\include;middleware\glew\include;middleware\assimp\include;middleware\rapidjson\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>middleware\glm;middleware\freeglut\include;middleware\glfw\include;middleware\antweakbar\include;middleware\glew\include;middleware\assimp\include;middleware\rapidjson\include;%(AdditionalIncludeDirectories);middleware\DevIL\include;middleware\SOIL\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;FREEGLUT_STATIC;_LIB;FREEGLUT_LIB_PRAGMAS=0;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>
@@ -127,7 +141,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>glload.lib;glimg.lib;glutil.lib;glmesh.lib;freeglut.lib;glu32.lib;opengl32.lib;gdi32.lib;winmm.lib;user32.lib;AntTweakBar.lib;glew32.lib;freeglut_static.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>freeglut.lib;glu32.lib;opengl32.lib;gdi32.lib;winmm.lib;user32.lib;AntTweakBar.lib;glew32.lib;freeglut_static.lib;assimp.lib;SOIL.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -136,11 +150,12 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <AdditionalLibraryDirectories>middleware\glload\lib;middleware\glimg\lib;middleware\glutil\lib;middleware\glmesh\lib;middleware\freeglut\lib;middleware\glfw\library;middleware\antweakbar\lib;middleware\glew\lib;middleware\assimp\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>middleware\glload\lib;middleware\glimg\lib;middleware\glutil\lib;middleware\glmesh\lib;middleware\freeglut\lib;middleware\glfw\library;middleware\antweakbar\lib;middleware\glew\lib;middleware\assimp\lib;middleware\DevIL\lib;middleware\SOIL\lib</AdditionalLibraryDirectories>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(ProjectDir)middleware\antweakbar\bin\AntTweakBar.dll" "$(TargetDir)"</Command>
+      <Command>copy "$(ProjectDir)middleware\antweakbar\bin\AntTweakBar.dll" "$(TargetDir)"
+copy "$(ProjectDir)middleware\glew\bin\glew32.dll" "$(TargetDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

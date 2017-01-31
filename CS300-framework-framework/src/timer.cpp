@@ -2,9 +2,9 @@
 
 namespace global
 {
-	double timer::mDt;
-	double timer::mPreviousTime;
-	double timer::mFPS;
+	float timer::mDt;
+	float timer::mPreviousTime;
+	float timer::mFPS;
 
 	timer::timer()
 	{
@@ -14,18 +14,18 @@ namespace global
 	{
 	}
 
-	void timer::initializeTimer(double t)
+	void timer::initializeTimer(float t)
 	{
 		mDt = 0.0;
 		mPreviousTime = t;
 		mFPS = 0.0;
 	}
 
-	void timer::updateTimer(double t)
+	void timer::updateTimer(float t)
 	{
-		double currentTIme = t;
+		float currentTIme = t;
 		mDt = currentTIme - mPreviousTime;
-		mFPS = 1.0 / mDt;
+		mFPS = 1.f / mDt;
 		mPreviousTime = currentTIme;
 	}
 }

@@ -25,6 +25,9 @@
     <Filter Include="camera">
       <UniqueIdentifier>{3b14b2ce-b9fe-48f3-8663-149f3c79c9c5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="manager">
+      <UniqueIdentifier>{4c427efd-e34f-4f0a-98db-f813b5f13b8a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\fbo.cpp">
@@ -59,6 +62,18 @@
     </ClCompile>
     <ClCompile Include="src\camera.cpp">
       <Filter>camera</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphicsObject.cpp">
+      <Filter>objects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\directionalLight.cpp">
+      <Filter>lights</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pointLight.cpp">
+      <Filter>lights</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lightManager.cpp">
+      <Filter>manager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -107,6 +122,15 @@
     <ClInclude Include="src\graphicObject.h">
       <Filter>objects</Filter>
     </ClInclude>
+    <ClInclude Include="src\directionalLight.h">
+      <Filter>lights</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pointLight.h">
+      <Filter>lights</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lightManager.h">
+      <Filter>manager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\final.frag">
@@ -115,10 +139,28 @@
     <None Include="shaders\final.vert">
       <Filter>shaders</Filter>
     </None>
-    <None Include="shaders\phong.frag">
+    <None Include="shaders\phong_Color.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="shaders\phong.vert">
+    <None Include="shaders\phong_Color.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\phong_Texture.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\phong_Texture.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\drawLight.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\drawLight.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\skybox.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\skybox.vert">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

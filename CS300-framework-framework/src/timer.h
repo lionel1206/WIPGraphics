@@ -5,14 +5,14 @@ namespace global
 	class timer
 	{
 	public:
-		static void initializeTimer(double t);
-		static void updateTimer(double t);
-		static double mDt;
-		static double mFPS;
+		static void initializeTimer(float t);
+		static void updateTimer(float t);
+		static float mDt;
+		static float mFPS;
 	private:
 		timer();
 		~timer();	
-		static double mPreviousTime;
+		static float mPreviousTime;
 		
 	};
 }

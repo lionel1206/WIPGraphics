@@ -18,6 +18,7 @@
     #include <fstream>
     #include <limits>
     #include <crtdbg.h>
+#define _CRT_SECURE_NO_WARNINGS
 #else
     // Includes for Linux
     #include <algorithm>
@@ -25,12 +26,11 @@
     #include <fstream>
 #endif
 
-#include <glload/gl_3_3.h>
-#include <glload/gll.hpp>
+#include "GL\glew.h"
 #include <GL/glut.h>
 #include <GL/freeglut.h>
 #include "AntTweakBar.h"
-
+#include <sstream>
 #include "math.h"
 
 #include "timer.h"
@@ -48,10 +48,17 @@ bool shifted;
 // Called by GLUT when the scene needs to be redrawn.
 void ReDraw()
 {
-	global::timer::updateTimer(glutGet(GLUT_ELAPSED_TIME) / 1000.0);
     DrawScene(scene);
 	TwDraw();
     glutSwapBuffers();
+	
+}
+
+void TimerUpdate(int time)
+{
+	global::timer::updateTimer(glutGet(GLUT_ELAPSED_TIME) / 1000.f);
+	glutPostRedisplay();
+	glutTimerFunc(1000.f / 60.f, TimerUpdate, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -67,109 +74,130 @@ void ReshapeWindow(int w, int h)
 
 ////////////////////////////////////////////////////////////////////////
 // Called by GLut for keyboard actions.
-void KeyboardInput(unsigned char key, int, int)
+void KeyboardInput(unsigned char key, int x, int y)
 {
-    switch(key) {
-	case 'd': scene.diffFlag =    1 - scene.diffFlag;  break;
-	case 's': scene.specFlag =    2 - scene.specFlag;  break;
-	case 't': scene.texFlag =     4 - scene.texFlag;  break;
-	case 'w': scene.shadowFlag =  8 - scene.shadowFlag;  break;
-	case 'b': scene.bumpFlag =   16 - scene.bumpFlag;  break;
-	case 'r': scene.reflFlag =   32 - scene.reflFlag;  break;
+	if (!TwEventKeyboardGLUT(key, x, y))
+	{
+		switch (key) {
 
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-        scene.mode = key-'0';
-		glutPostRedisplay();
-        break;
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			glutPostRedisplay();
+			break;
 
-    case 27:                    // Escape key
-        exit(0);
-    }
+		case 27:                    // Escape key
+			exit(0);
+		}
+	}
+    
 }
 
 ////////////////////////////////////////////////////////////////////////
 // Called by GLut when a mouse button changes state.
 void MouseButton(int button, int state, int x, int y)
 {
-    shifted = glutGetModifiers() && GLUT_ACTIVE_SHIFT;
+	if (!TwEventMouseButtonGLUT(button, state, x, y))
+	{
+		shifted = glutGetModifiers() && GLUT_ACTIVE_SHIFT;
 
-    if (button == GLUT_LEFT_BUTTON)
-        leftDown = (state == GLUT_DOWN);
+		if (button == GLUT_LEFT_BUTTON)
+			leftDown = (state == GLUT_DOWN);
 
-    else if (button == GLUT_MIDDLE_BUTTON)
-        middleDown = (state == GLUT_DOWN);
+		else if (button == GLUT_MIDDLE_BUTTON)
+			middleDown = (state == GLUT_DOWN);
 
-    else if (button == GLUT_RIGHT_BUTTON)
-        rightDown = (state == GLUT_DOWN);
+		else if (button == GLUT_RIGHT_BUTTON)
+			rightDown = (state == GLUT_DOWN);
 
-    else if (button%8 == 3 && shifted)
-        scene.lightDist = pow(scene.lightDist, 1.0f/1.02f);
+		else if (button % 8 == 3 && shifted)
+			scene.lightDist = pow(scene.lightDist, 1.0f / 1.02f);
 
-    else if (button%8 == 3)
-        scene.zoom = pow(scene.zoom, 1.0f/1.02f);
+		else if (button % 8 == 3)
+			scene.zoom = pow(scene.zoom, 1.0f / 1.02f);
 
-    else if (button%8 == 4 && shifted)
-        scene.lightDist = pow(scene.lightDist, 1.02f);
+		else if (button % 8 == 4 && shifted)
+			scene.lightDist = pow(scene.lightDist, 1.02f);
 
-    else if (button%8 == 4)
-        scene.zoom = pow(scene.zoom, 1.02f);
+		else if (button % 8 == 4)
+			scene.zoom = pow(scene.zoom, 1.02f);
 
-    mouseX = x;
-    mouseY = y;
+		mouseX = x;
+		mouseY = y;
 
-	glutPostRedisplay();
-
+		//glutPostRedisplay();
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////
 // Called by GLut when a mouse moves (while a button is down)
 void MouseMotion(int x, int y)
 {
-    int dx = x-mouseX;
-    int dy = y-mouseY;
-
-    if (leftDown && shifted) {
-        scene.lightSpin += dx/3.;
-        scene.lightTilt -= dy/3.; }
-
-    else if (leftDown) {
-        scene.eyeSpin += dx/2.;
-        scene.eyeTilt += dy/2.; }
-
-
-    if (middleDown && shifted) {
-        scene.lightDist = pow(scene.lightDist, 1.0f-dy/200.0f);  }
-
-    else if (middleDown) 
+	if (!TwEventMouseMotionGLUT(x, y))
 	{
-        scene.zoom += dy/10.0f; 
-		scene.cameraRadius += dy / 10.f;
-		global::gEditorCamera.setRadius(scene.cameraRadius);
+		int dx = x - mouseX;
+		int dy = y - mouseY;
+
+		if (leftDown && shifted) {
+			scene.lightSpin += dx / 3.f;
+			scene.lightTilt -= dy / 3.f;
+		}
+
+		else if (leftDown)
+		{
+			scene.gEditorCamera.horizontalMove((dx * global::timer::mDt));
+			scene.gEditorCamera.verticalMove((dy * global::timer::mDt));
+		}
+
+
+		if (middleDown && shifted) {
+			scene.lightDist = pow(scene.lightDist, 1.0f - dy / 200.0f);
+		}
+
+		else if (middleDown)
+		{
+
+		}
+
+
+		if (rightDown && shifted) {
+			/* nothing */
+		}
+		else if (rightDown) {
+			scene.translatex += dx / 20.0f;
+			scene.translatey -= dy / 20.0f;
+			scene.gEditorCamera.setPanDir(glm::vec2(-dx * global::timer::mDt,
+				                                    -dy * global::timer::mDt));
+		}
+
+		// Record this position 
+		mouseX = x;
+		mouseY = y;
+
+		// Draw the scene, transformed by the new values.
+		//glutPostRedisplay();
 	}
+}
 
-
-    if (rightDown && shifted) {
-        /* nothing */ }
-    else if (rightDown) {
-        scene.translatex += dx/20.0f;
-        scene.translatey -= dy/20.0f; }
-
-    // Record this position 
-    mouseX = x;
-    mouseY = y;
-
-    // Draw the scene, transformed by the new values.
+void MouseWheel(int wheel, int direction, int x, int y)
+{
+	float cameraSpeed = 50.f;
+	if (direction > 0)
+	{
+		scene.gEditorCamera.zoom(direction * global::timer::mDt);
+	}
+	else
+	{
+		scene.gEditorCamera.zoom(direction * global::timer::mDt);
+	}
 	glutPostRedisplay();
-
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -189,11 +217,17 @@ int main(int argc, char** argv)
 	glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
 
 
-	glutInitWindowSize(global::gWidth,global::gHeight);
+	glutInitWindowSize(global::gWidth, global::gHeight);
     glutCreateWindow("WIP Graphics");
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 
-	glload::LoadFunctions();
+	glewExperimental = TRUE;
+	GLenum err = glewInit();
+	if (GLEW_OK != err)
+	{
+		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+		return -1;
+	}
 
 	printf("OpenGL Version: %s\n", glGetString(GL_VERSION));
 	printf("GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
@@ -203,18 +237,80 @@ int main(int argc, char** argv)
     glutReshapeFunc(&ReshapeWindow);
     glutKeyboardFunc(&KeyboardInput);
     glutMouseFunc(&MouseButton);
+	glutMouseWheelFunc(&MouseWheel);
     glutMotionFunc(&MouseMotion);
+	glutTimerFunc(1000.f/ 60.f, &TimerUpdate, 0);
 	glutCloseFunc(cleanUp);
 
     InitializeScene(scene);
 
 	global::timer::initializeTimer(0.0);
 	TwInit(TW_OPENGL_CORE, NULL);
-	TwWindowSize(global::gWidth, global::gHeight);
+	TwWindowSize((int)global::gWidth, (int)global::gHeight);
 
-	TwBar* atTimerDIsplay = TwNewBar("Timer DIsplay");
-	TwAddVarRO(atTimerDIsplay, "Delta Time", TW_TYPE_DOUBLE, &global::timer::mDt, "");
-	TwAddVarRO(atTimerDIsplay, "FPS", TW_TYPE_DOUBLE, &global::timer::mFPS, "");
+	TwBar* atSceneControl = TwNewBar("Scene Control");
+	TwAddVarRO(atSceneControl, "FPS", TW_TYPE_FLOAT, &global::timer::mFPS, "");
+	TwAddVarRW(atSceneControl, "Ambient Light Color", TW_TYPE_COLOR3F, &scene.ambientLightParameters.ambientLightColor, "group=AmbientLight");
+	TwAddVarRW(atSceneControl, "Ambient Light Strength", TW_TYPE_FLOAT, &scene.ambientLightParameters.ambientLightStrength, "group=AmbientLight");
+	for (int i = 0; i < scene.directionalLightParameters.size(); ++i)
+	{
+		std::stringstream group;
+		group << "group=DirectionLight" << i;
+
+		std::stringstream direction;
+		direction << "Direction Light " << i << " Dir";
+
+		std::stringstream diffuse;
+		diffuse << "Direction Light " << i << " Diffuse Color";
+
+		std::stringstream specular;
+		specular << "Direction Light " << i << " Specular Color";
+
+		TwAddVarRW(atSceneControl, direction.str().c_str(), TW_TYPE_DIR3F, &scene.directionalLightParameters[i].directionLightDir, group.str().c_str());
+		TwAddVarRW(atSceneControl, diffuse.str().c_str(), TW_TYPE_COLOR3F, &scene.directionalLightParameters[i].directionLightDiffuse, group.str().c_str());
+		TwAddVarRW(atSceneControl, specular.str().c_str(), TW_TYPE_COLOR3F, &scene.directionalLightParameters[i].directionLightSpecular, group.str().c_str());
+	}
+
+	for (int i = 0; i < scene.pointLightParameters.size(); ++i)
+	{
+		std::stringstream ss;
+		ss << "group=PointLight" << i;
+
+		std::stringstream position;
+		position << "Point Light " << i << " Position";
+
+		std::stringstream diffuse;
+		diffuse << "Point Light " << i << " Diffuse Color";
+
+		std::stringstream specular;
+		specular << "Point Light " << i << " Specular Color";
+
+		std::stringstream distance;
+		distance << "Point Light " << i << " Distance";
+
+		std::stringstream constant;
+		constant << "Point Light " << i << " Constant";
+
+		std::stringstream linear;
+		linear << "Point Light " << i << " Linear";
+
+		std::stringstream quadratic;
+		quadratic << "Point Light " << i << " Quadratic";
+
+		TwAddVarRW(atSceneControl, position.str().c_str(), TW_TYPE_DIR3F, &scene.pointLightParameters[i].pointLightPosition, ss.str().c_str());
+		TwAddVarRW(atSceneControl, diffuse.str().c_str(), TW_TYPE_COLOR3F, &scene.pointLightParameters[i].pointLightDiffuse, ss.str().c_str());
+		TwAddVarRW(atSceneControl, specular.str().c_str(), TW_TYPE_COLOR3F, &scene.pointLightParameters[i].pointLightSpecular, ss.str().c_str());
+
+		TwAddVarRW(atSceneControl, distance.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationDistance, ss.str().c_str());
+		TwAddVarRW(atSceneControl, constant.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationConstanst, ss.str().c_str());
+		TwAddVarRW(atSceneControl, linear.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationLinear, ss.str().c_str());
+		TwAddVarRW(atSceneControl, quadratic.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationQuadratic, ss.str().c_str());
+	}
+
+	//TwAddVarRW(atSceneControl, "Direction Light Dir", TW_TYPE_DIR3F, &scene.lightParam.directionLightDir, "group=Light");
+	//TwAddVarRW(atSceneControl, "Direction Light Diffuse Color", TW_TYPE_COLOR3F, &scene.lightParam.directionLightDiffuse, "group=Light");
+	
+
     // This function enters an event loop.
     glutMainLoop();
 }
