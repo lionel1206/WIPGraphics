@@ -7,15 +7,20 @@
 //
 // Copyright 2013 DigiPen Institute of Technology
 ////////////////////////////////////////////////////////////////////////
+#pragma once
 
 class FBO {
 public:
-	unsigned int fbo;
-
-	unsigned int texture;
-	int width, height;  // Size of the texture.
-
 	void CreateFBO(const int w, const int h);
 	void Bind();
 	void Unbind();
+	void getWidthAndHeight(int& FBOWidth, int& FBOHeight);
+	void setWidthAndHeight(const int &FBOWidth, const int &FBOHeight);
+	unsigned int getFBO();
+	unsigned int getFBOTexture();
+private:
+	unsigned int fbo;
+	unsigned int texture;
+	int width, height;  // Size of the texture.
+	
 };

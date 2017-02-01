@@ -18,7 +18,16 @@
 #include "camera.h"
 #include "graphicObject.h"
 #include "lightManager.h"
+#include "fbo.h"
 #include <vector>
+
+struct directionalShadowMapParam
+{
+	int shadowMapWidth, shadowMapHeight;
+	float shadowDistance;
+	float lightFrustrumWidth, lightFrustrumHeight;
+	FBO shadowDepthMap;
+};
 
 class Scene
 {
@@ -48,6 +57,7 @@ public:
 	unsigned int boxVAO, boxTexture;
 	unsigned int planeVAO, planceTexture;
 	unsigned int skyBoxTexture;
+	
 	camera gEditorCamera;
 	glm::mat4 perspectiveMtx;
 	ambientLight mAmbientLight;
@@ -66,7 +76,9 @@ public:
 	directionLightParamContainter directionalLightParameters;
 	ambientLightParam ambientLightParameters;
 	lightManager mLightManager;
-	int shadowMapWidth, shadowMapHeight;
+	directionalShadowMapParam dirShadowMap;
+	bool showShadowDepthMap = true;
+	unsigned int shadowDepthMapTextureQuad, shadowDepthQuadCount;
 };
 
 void InitializeScene(Scene &scene);

@@ -43,6 +43,7 @@ typedef std::vector<meshData> modelData;
 
 bool loadModelFromFile(const char *path, meshData &mesh);
 unsigned int createVAO(meshData& mesh);
+unsigned int createQuad(unsigned int& faceCount);
 unsigned int CreateTeapot(const int n,  unsigned int& count);
 unsigned int CreateSphere(const int n,  unsigned int& count);
 unsigned int CreateGround(const float range, const int n,  unsigned int& count);

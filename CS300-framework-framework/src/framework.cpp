@@ -249,10 +249,11 @@ int main(int argc, char** argv)
 	TwWindowSize((int)global::gWidth, (int)global::gHeight);
 
 	TwBar* atSceneControl = TwNewBar("Scene Control");
+	TwBar* atLightControl = TwNewBar("Lighting Control");
 	TwAddVarRO(atSceneControl, "FPS", TW_TYPE_FLOAT, &global::timer::mFPS, "");
-	TwAddVarRW(atSceneControl, "Ambient Light Color", TW_TYPE_COLOR3F, &scene.ambientLightParameters.ambientLightColor, "group=AmbientLight");
-	TwAddVarRW(atSceneControl, "Ambient Light Strength", TW_TYPE_FLOAT, &scene.ambientLightParameters.ambientLightStrength, "group=AmbientLight");
-	for (int i = 0; i < scene.directionalLightParameters.size(); ++i)
+	TwAddVarRW(atLightControl, "Ambient Light Color", TW_TYPE_COLOR3F, &scene.ambientLightParameters.ambientLightColor, "group=AmbientLight");
+	TwAddVarRW(atLightControl, "Ambient Light Strength", TW_TYPE_FLOAT, &scene.ambientLightParameters.ambientLightStrength, "group=AmbientLight");
+	for (unsigned int i = 0; i < scene.directionalLightParameters.size(); ++i)
 	{
 		std::stringstream group;
 		group << "group=DirectionLight" << i;
@@ -266,12 +267,12 @@ int main(int argc, char** argv)
 		std::stringstream specular;
 		specular << "Direction Light " << i << " Specular Color";
 
-		TwAddVarRW(atSceneControl, direction.str().c_str(), TW_TYPE_DIR3F, &scene.directionalLightParameters[i].directionLightDir, group.str().c_str());
-		TwAddVarRW(atSceneControl, diffuse.str().c_str(), TW_TYPE_COLOR3F, &scene.directionalLightParameters[i].directionLightDiffuse, group.str().c_str());
-		TwAddVarRW(atSceneControl, specular.str().c_str(), TW_TYPE_COLOR3F, &scene.directionalLightParameters[i].directionLightSpecular, group.str().c_str());
+		TwAddVarRW(atLightControl, direction.str().c_str(), TW_TYPE_DIR3F, &scene.directionalLightParameters[i].directionLightDir, group.str().c_str());
+		TwAddVarRW(atLightControl, diffuse.str().c_str(), TW_TYPE_COLOR3F, &scene.directionalLightParameters[i].directionLightDiffuse, group.str().c_str());
+		TwAddVarRW(atLightControl, specular.str().c_str(), TW_TYPE_COLOR3F, &scene.directionalLightParameters[i].directionLightSpecular, group.str().c_str());
 	}
 
-	for (int i = 0; i < scene.pointLightParameters.size(); ++i)
+	for (unsigned int i = 0; i < scene.pointLightParameters.size(); ++i)
 	{
 		std::stringstream ss;
 		ss << "group=PointLight" << i;
@@ -297,19 +298,15 @@ int main(int argc, char** argv)
 		std::stringstream quadratic;
 		quadratic << "Point Light " << i << " Quadratic";
 
-		TwAddVarRW(atSceneControl, position.str().c_str(), TW_TYPE_DIR3F, &scene.pointLightParameters[i].pointLightPosition, ss.str().c_str());
-		TwAddVarRW(atSceneControl, diffuse.str().c_str(), TW_TYPE_COLOR3F, &scene.pointLightParameters[i].pointLightDiffuse, ss.str().c_str());
-		TwAddVarRW(atSceneControl, specular.str().c_str(), TW_TYPE_COLOR3F, &scene.pointLightParameters[i].pointLightSpecular, ss.str().c_str());
+		TwAddVarRW(atLightControl, position.str().c_str(), TW_TYPE_DIR3F, &scene.pointLightParameters[i].pointLightPosition, ss.str().c_str());
+		TwAddVarRW(atLightControl, diffuse.str().c_str(), TW_TYPE_COLOR3F, &scene.pointLightParameters[i].pointLightDiffuse, ss.str().c_str());
+		TwAddVarRW(atLightControl, specular.str().c_str(), TW_TYPE_COLOR3F, &scene.pointLightParameters[i].pointLightSpecular, ss.str().c_str());
 
-		TwAddVarRW(atSceneControl, distance.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationDistance, ss.str().c_str());
-		TwAddVarRW(atSceneControl, constant.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationConstanst, ss.str().c_str());
-		TwAddVarRW(atSceneControl, linear.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationLinear, ss.str().c_str());
-		TwAddVarRW(atSceneControl, quadratic.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationQuadratic, ss.str().c_str());
+		TwAddVarRW(atLightControl, distance.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationDistance, ss.str().c_str());
+		TwAddVarRW(atLightControl, constant.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationConstanst, ss.str().c_str());
+		TwAddVarRW(atLightControl, linear.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationLinear, ss.str().c_str());
+		TwAddVarRW(atLightControl, quadratic.str().c_str(), TW_TYPE_FLOAT, &scene.pointLightParameters[i].pointLightAttenuationQuadratic, ss.str().c_str());
 	}
-
-	//TwAddVarRW(atSceneControl, "Direction Light Dir", TW_TYPE_DIR3F, &scene.lightParam.directionLightDir, "group=Light");
-	//TwAddVarRW(atSceneControl, "Direction Light Diffuse Color", TW_TYPE_COLOR3F, &scene.lightParam.directionLightDiffuse, "group=Light");
-	
 
     // This function enters an event loop.
     glutMainLoop();

@@ -58,6 +58,32 @@ void FBO::CreateFBO(const int w, const int h)
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 }
 
+unsigned int FBO::getFBO()
+{
+	return fbo;
+}
+
+unsigned int FBO::getFBOTexture()
+{
+	return texture;
+}
+
+void FBO::getWidthAndHeight(int& FBOWidth, int& FBOHeight)
+{
+	FBOWidth = width;
+	FBOHeight = height;
+}
+
+void FBO::setWidthAndHeight(const int &FBOWidth, const int &FBOHeight)
+{
+	if (width != FBOWidth || height != FBOHeight)
+	{
+		glDeleteFramebuffers(1, &fbo);
+		glDeleteTextures(1, &texture);
+
+		CreateFBO(FBOWidth, FBOHeight);
+	}
+}
 
 void FBO::Bind() { glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo); }
 void FBO::Unbind() { glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0); }

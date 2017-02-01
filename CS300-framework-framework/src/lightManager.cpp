@@ -26,7 +26,7 @@ lightManager::~lightManager()
 
 void lightManager::updateLightParameters(pointLightParamContainter& ptLightParams, directionLightParamContainter& directionalLightParameters)
 {
-	for (int i = 0; i < pointLightContainer.size(); ++i)
+	for (unsigned int i = 0; i < pointLightContainer.size(); ++i)
 	{
 		pointLightContainer[i].setPosition(ptLightParams[i].pointLightPosition);
 		pointLightContainer[i].setDiffuseColor(ptLightParams[i].pointLightDiffuse);
@@ -39,7 +39,7 @@ void lightManager::updateLightParameters(pointLightParamContainter& ptLightParam
 
 	}
 
-	for (int i = 0; i < directionalLightContainer.size(); ++i)
+	for (unsigned int i = 0; i < directionalLightContainer.size(); ++i)
 	{
 		directionalLightContainer[i].setLightDirection(directionalLightParameters[i].directionLightDir);
 		directionalLightContainer[i].setDiffuseColor(directionalLightParameters[i].directionLightDiffuse);
@@ -47,7 +47,7 @@ void lightManager::updateLightParameters(pointLightParamContainter& ptLightParam
 	}
 }
 
-void lightManager::pushLightInfoToGPU(unsigned int shader)
+void lightManager::passDataToShader(unsigned int shader)
 {
 	for (auto ptLight : pointLightContainer)
 	{
@@ -60,10 +60,20 @@ void lightManager::pushLightInfoToGPU(unsigned int shader)
 	}
 }
 
-void lightManager::drawLight(unsigned int shader)
+void lightManager::draw(unsigned int shader)
 {
 	for (auto ptLight : pointLightContainer)
 	{
 		ptLight.draw(shader);
 	}
+}
+
+std::vector<directionalLight>& lightManager::getDirectionalLights()
+{
+	return directionalLightContainer;
+}
+
+std::vector<pointLight>& lightManager::getPointLights()
+{
+	return pointLightContainer;
 }
