@@ -38,8 +38,10 @@ public:
 	lightManager(std::vector<pointLight>& ptLights, std::vector<directionalLight>& dirLights);
 	~lightManager();
 	void updateLightParameters(pointLightParamContainter& ptLightParams, directionLightParamContainter& directionalLightParameters);
-	void pushLightInfoToGPU(unsigned int shader);
-	void drawLight(unsigned int shader);
+	void passDataToShader(unsigned int shader);
+	void draw(unsigned int shader);
+	std::vector<directionalLight>& getDirectionalLights();
+	std::vector<pointLight>& getPointLights();
 private:
 	std::vector<pointLight> pointLightContainer;
 	std::vector<directionalLight> directionalLightContainer;

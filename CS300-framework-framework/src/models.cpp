@@ -753,3 +753,22 @@ unsigned int createVAO(meshData& mesh)
 
 	return vao;
 }
+
+unsigned int createQuad(unsigned int &faceCount)
+{
+
+	std::vector<glm::vec3> vertices = { glm::vec3(200.5f, 200.5f, 0.0f), glm::vec3(200.5f, -200.5f, 0.0f),
+										glm::vec3(-200.5f, -200.5f, 0.0f), glm::vec3(-200.5f, 200.5f, 0.0f) };
+
+	std::vector<glm::vec3> uvs = { glm::vec3(1.0f, 1.0f, 0.f), glm::vec3(1.0f, 0.0f, 0.f),
+								  glm::vec3(0.0f, 0.0f, 0.f), glm::vec3(0.0f, 1.0f, 0.f) };
+
+	std::vector<unsigned int> faces = { 0,1,3,1,2,3 };
+
+	meshData quadData;
+	quadData.faces = faces;
+	quadData.uvs = uvs;
+	quadData.verts = vertices;
+	faceCount = faces.size();
+	return createVAO(quadData);
+}

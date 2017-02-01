@@ -75,6 +75,9 @@
     <ClCompile Include="src\lightManager.cpp">
       <Filter>manager</Filter>
     </ClCompile>
+    <ClCompile Include="src\graphicsObjectManager.cpp">
+      <Filter>manager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\fbo.h">
@@ -131,6 +134,9 @@
     <ClInclude Include="src\lightManager.h">
       <Filter>manager</Filter>
     </ClInclude>
+    <ClInclude Include="src\graphicsObjectManager.h">
+      <Filter>manager</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\final.frag">
@@ -161,6 +167,18 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="shaders\skybox.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\shadowDepth.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\shadowDepth.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\shadowDepthDraw.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\shadowDepthDraw.vert">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

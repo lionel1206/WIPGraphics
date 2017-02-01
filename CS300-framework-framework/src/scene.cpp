@@ -110,21 +110,20 @@ void InitializeScene(Scene &scene)
 {
 	CHECKERROR;
 
-	scene.shadowMapWidth = 1280;
-	scene.shadowMapHeight = 720;
+	scene.dirShadowMap.shadowMapWidth = 1280;
+	scene.dirShadowMap.shadowMapHeight = 720;
+	scene.dirShadowMap.lightFrustrumWidth = 100.f;
+	scene.dirShadowMap.lightFrustrumHeight = 100.f;
+	scene.dirShadowMap.shadowDistance = 200.f;
+	scene.dirShadowMap.shadowDepthMap.CreateFBO(scene.dirShadowMap.shadowMapWidth, scene.dirShadowMap.shadowMapHeight);
 
 	scene.gEditorCamera.initialize(glm::vec3(0,50,-100),
 									 glm::vec3(0, 0, 0));
-
-	scene.mAmbientLight.setAmbientColor(glm::vec3(1.f, 1.f, 1.f));
-	scene.mAmbientLight.setAmbientStrength(0.2f);
-	scene.ambientLightParameters.ambientLightColor = scene.mAmbientLight.getAmbientColor();
-	scene.ambientLightParameters.ambientLightStrength = scene.mAmbientLight.getAmbientStrength();
     
     // Enable OpenGL depth-testing
     glEnable(GL_DEPTH_TEST);
 
-    // Create the scene models
+    // Create the scene models and textures
 	if (!loadModelFromFile("assets/model/ground.json", groundMesh))
 		std::cout << "Unable to load assets/model/ground.json" << std::endl;
 	scene.groundVAO = createVAO(groundMesh);
@@ -133,9 +132,28 @@ void InitializeScene(Scene &scene)
 		std::cout << "Unable to load assets/model/cube.json" << std::endl;
 	scene.boxVAO = createVAO(boxMesh);
 
-	
+	if (!loadModelFromFile("assets/model/sphere.json", sphereMesh))
+		std::cout << "Unable to load assets/model/sphere.json" << std::endl;
+	scene.sphereVAO = createVAO(sphereMesh);
 
-	glm::vec3 ptLightPosition[] = { glm::vec3(100, 85, -50), glm::vec3(0, 85, 50), glm::vec3(-100, 85, -50) };
+	scene.shadowDepthMapTextureQuad = createQuad(scene.shadowDepthQuadCount);
+
+	scene.groundTexture = loadTexture("assets/texture/floor_diffuse.png");
+	scene.boxTexture = loadTexture("assets/texture/crate_diffuse.png");
+
+	std::vector<const char*> skyBoxTexturePaths = { "assets/texture/skybox_right.tga", "assets/texture/skybox_left.tga",
+		"assets/texture/skybox_up.tga", "assets/texture/skybox_down.tga",
+		"assets/texture/skybox_back.tga", "assets/texture/skybox_front.tga", };
+	scene.skyBoxTexture = loadCube(skyBoxTexturePaths);
+
+	// initialize light data
+
+	scene.mAmbientLight.setAmbientColor(glm::vec3(1.f, 1.f, 1.f));
+	scene.mAmbientLight.setAmbientStrength(0.2f);
+	scene.ambientLightParameters.ambientLightColor = scene.mAmbientLight.getAmbientColor();
+	scene.ambientLightParameters.ambientLightStrength = scene.mAmbientLight.getAmbientStrength();
+
+	glm::vec3 ptLightPosition[] = { glm::vec3(100, 85, -50), glm::vec3(0, 85, 100), glm::vec3(-100, 85, -50) };
 	glm::vec4 ptLightAttenuation[] = { glm::vec4(325, 1.0, 0.014, 0.0007), glm::vec4(600, 1.0, 0.007, 0.0002), glm::vec4(160, 1.0, 0.027, 0.0028) };
 	glm::vec3 ptLightColor[] = { glm::vec3(0,1,0), glm::vec3(1,0,0) , glm::vec3(0,0,1) };
 	int MAX_POINT_LIGHT = 3;
@@ -170,19 +188,7 @@ void InitializeScene(Scene &scene)
 	
 	scene.mLightManager = lightManager(scene.pointLightContainer, scene.directionalLightContainer);
 
-	scene.groundTexture = loadTexture("assets/texture/floor_diffuse.png");
-	scene.boxTexture = loadTexture("assets/texture/crate_diffuse.png");
-
-	if (!loadModelFromFile("assets/model/sphere.json", sphereMesh))
-		std::cout << "Unable to load assets/model/sphere.json" << std::endl;
-	scene.sphereVAO = createVAO(sphereMesh);
-
-	std::vector<const char*> skyBoxTexturePaths = { "assets/texture/skybox_right.tga", "assets/texture/skybox_left.tga",
-		                                            "assets/texture/skybox_up.tga", "assets/texture/skybox_down.tga", 
-		                                            "assets/texture/skybox_back.tga", "assets/texture/skybox_front.tga", };
-	scene.skyBoxTexture = loadCube(skyBoxTexturePaths);
-
-    // Create the FINAL shader program from source code files.
+    // initialize and load shaders
 	scene.shaderFINAL.CreateProgram();
 	scene.shaderFINAL.CreateShader("shaders/phong_Color.vert", GL_VERTEX_SHADER);
 	scene.shaderFINAL.CreateShader("shaders/phong_Color.frag", GL_FRAGMENT_SHADER);
@@ -227,14 +233,34 @@ void InitializeScene(Scene &scene)
 	CHECKERROR;
 	scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_SKYBOX] = skyboxShader;
 
+	ShaderProgram shadowDepthShader;
+	shadowDepthShader.CreateProgram();
+	shadowDepthShader.CreateShader("shaders/shadowDepth.vert", GL_VERTEX_SHADER);
+	shadowDepthShader.CreateShader("shaders/shadowDepth.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(shadowDepthShader.getProgram(), 0, "vertex");
+	shadowDepthShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::SHADOW_DEPTH] = shadowDepthShader;
+
+	ShaderProgram shadowDepthRenderShader;
+	shadowDepthRenderShader.CreateProgram();
+	shadowDepthRenderShader.CreateShader("shaders/shadowDepthDraw.vert", GL_VERTEX_SHADER);
+	shadowDepthRenderShader.CreateShader("shaders/shadowDepthDraw.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(shadowDepthRenderShader.getProgram(), 0, "vertex");
+	glBindAttribLocation(shadowDepthRenderShader.getProgram(), 1, "vertexTexture");
+	shadowDepthRenderShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::SHADOW_DEPTH_FBO] = shadowDepthRenderShader;
+
 	scene.fovDeg = 45.f;
 	scene.nearplane = 0.1f;
 	scene.farplane = 20000.f;
 	scene.perspectiveMtx = glm::perspective(scene.fovDeg, global::gWidth / global::gHeight,
 											scene.nearplane, scene.farplane);
 
+
+	// initialize and crate scene objects
 	graphicObject groundObject(glm::vec3(0.f, 0.f, 0.f), glm::vec3(), glm::vec3(250,1,250), scene.groundVAO, groundMesh.faces.size());
-	//groundObject.setColor(glm::vec3(diffuseColor[0], diffuseColor[1], diffuseColor[2]));
 	groundObject.setTextureMap(scene.groundTexture); 
 	scene.graphicsObjectContainer.push_back(groundObject);
 
@@ -259,8 +285,60 @@ void InitializeScene(Scene &scene)
 		scene.graphicsObjectContainer.push_back(boxObject);
 	}
 }
-
 ////////////////////////////////////////////////////////////////////////
+
+void renderGeometry(Scene &scene, unsigned int shader)
+{
+	for (unsigned int i = 0; i < scene.graphicsObjectContainer.size(); ++i)
+	{
+		scene.mAmbientLight.updateLightParameter(shader);
+		scene.mLightManager.passDataToShader(shader);
+		scene.graphicsObjectContainer[i].draw(shader);
+	}
+}
+
+void gatherShadowInfo(Scene &scene)
+{
+	glViewport(0,0,scene.dirShadowMap.shadowMapWidth, scene.dirShadowMap.shadowMapHeight);
+	scene.dirShadowMap.shadowDepthMap.Bind();
+	glClear(GL_DEPTH_BUFFER_BIT);
+	float halfWidth = scene.dirShadowMap.lightFrustrumWidth / 2.f;
+	float halfHeight = scene.dirShadowMap.lightFrustrumHeight / 2.f;
+
+	glm::mat4 lightProjection = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, scene.nearplane, scene.farplane);
+
+	ShaderProgram shadowDepthShader = scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::SHADOW_DEPTH];
+	shadowDepthShader.Use();
+	for (auto dirLight : scene.mLightManager.getDirectionalLights())
+	{
+		glm::vec3 lightPos = -dirLight.getLightDirection() * scene.dirShadowMap.shadowDistance;
+		glm::mat4 lightView = glm::lookAt(lightPos, dirLight.getLightDirection(), glm::vec3(0, 1, 0));
+		glm::mat4 lightSpaceMtx = lightProjection * lightView;
+		int loc = glGetUniformLocation(shadowDepthShader.getProgram(), "LightSpaceMtx");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(lightSpaceMtx));
+		
+		renderGeometry(scene, shadowDepthShader.getProgram());
+	}
+	shadowDepthShader.Unuse();
+	scene.dirShadowMap.shadowDepthMap.Unbind();
+	CHECKERROR;
+	if (scene.showShadowDepthMap)
+	{
+		ShaderProgram shadowDepthRenderShader = scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::SHADOW_DEPTH_FBO];
+		shadowDepthRenderShader.Use();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, scene.dirShadowMap.shadowDepthMap.getFBOTexture());
+		int loc = glGetUniformLocation(shadowDepthRenderShader.getProgram(), "shadowMapDepth");
+		glUniform1i(loc, 0);
+		CHECKERROR;
+		glBindVertexArray(scene.shadowDepthMapTextureQuad);
+		glDrawElements(GL_TRIANGLES, scene.shadowDepthQuadCount, GL_UNSIGNED_INT, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindVertexArray(0);
+		CHECKERROR;
+		shadowDepthRenderShader.Unuse();
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Procedure DrawScene is called whenever the scene needs to be drawn.
@@ -277,70 +355,67 @@ void DrawScene(Scene &scene)
 	// Calculate the inverse of the viewing matrix and send to the shader
 	glm::mat4x4 inverseViewMtx = glm::affineInverse(viewMtx);
 
-	glDepthMask(GL_FALSE);
-	ShaderProgram skyboxProgram = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_SKYBOX];
-	skyboxProgram.Use();
-	int loc = glGetUniformLocation(skyboxProgram.getProgram(), "ProjectionMatrix");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
+	// skybox render
+	{
+		glDepthMask(GL_FALSE);
+		ShaderProgram skyboxProgram = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_SKYBOX];
+		skyboxProgram.Use();
+		int loc = glGetUniformLocation(skyboxProgram.getProgram(), "ProjectionMatrix");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
 
-	glm::mat4 skyboxView = glm::mat4(glm::mat3(viewMtx));
-	loc = glGetUniformLocation(skyboxProgram.getProgram(), "ViewMatrix");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(skyboxView));
+		glm::mat4 skyboxView = glm::mat4(glm::mat3(viewMtx));
+		loc = glGetUniformLocation(skyboxProgram.getProgram(), "ViewMatrix");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(skyboxView));
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, scene.skyBoxTexture);
-	loc = glGetUniformLocation(skyboxProgram.getProgram(), "skybox");
-	glUniform1i(loc, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, scene.skyBoxTexture);
+		loc = glGetUniformLocation(skyboxProgram.getProgram(), "skybox");
+		glUniform1i(loc, 0);
 
-	glBindVertexArray(scene.boxVAO);
-	glDrawElements(GL_TRIANGLES, boxMesh.faces.size(), GL_UNSIGNED_INT, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindVertexArray(0);
-	glDepthMask(GL_TRUE);
+		glBindVertexArray(scene.boxVAO);
+		glDrawElements(GL_TRIANGLES, boxMesh.faces.size(), GL_UNSIGNED_INT, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindVertexArray(0);
+		glDepthMask(GL_TRUE);
+	}
+	
 
 	scene.mLightManager.updateLightParameters(scene.pointLightParameters, scene.directionalLightParameters);
 	scene.mAmbientLight.setAmbientColor(scene.ambientLightParameters.ambientLightColor);
 	scene.mAmbientLight.setAmbientStrength(scene.ambientLightParameters.ambientLightStrength);
 
-	for (unsigned int i = 0; i < scene.graphicsObjectContainer.size(); ++i)
+	//gatherShadowInfo(scene);
+
+	// render all objects in scene
 	{
 		auto lightType = global::eLightingType::BLINN_PHONG;
-		auto modelMaterial = scene.graphicsObjectContainer[0].getMaterialType();
+		auto modelMaterial = global::eObjectMaterialType::TEXTURE;
 		ShaderProgram currentShader = scene.shaderLibrary[lightType][modelMaterial];
-
 		currentShader.Use();
-
-		loc = glGetUniformLocation(currentShader.getProgram(), "ProjectionMatrix");
+		int loc = glGetUniformLocation(currentShader.getProgram(), "ProjectionMatrix");
 		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
-
 		loc = glGetUniformLocation(currentShader.getProgram(), "ViewMatrix");
 		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(viewMtx));
-		CHECKERROR;
-
 		loc = glGetUniformLocation(currentShader.getProgram(), "cameraPos");
 		glUniform3fv(loc, 1, glm::value_ptr(scene.gEditorCamera.getPosition()));
-
 		loc = glGetUniformLocation(currentShader.getProgram(), "ViewInverse");
 		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(inverseViewMtx));
-		CHECKERROR;
-
-		
-		scene.mAmbientLight.updateLightParameter(currentShader.getProgram());
-		scene.mLightManager.pushLightInfoToGPU(currentShader.getProgram());
-		scene.graphicsObjectContainer[i].draw(currentShader.getProgram());
-
+		renderGeometry(scene, currentShader.getProgram());
 		currentShader.Unuse();
-		CHECKERROR;
 	}
+	
 
-	// draw lights
-	ShaderProgram lightShader = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::LIGHT_COLOR];
-	lightShader.Use();
-	loc = glGetUniformLocation(lightShader.getProgram(), "ProjectionMatrix");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
-	loc = glGetUniformLocation(lightShader.getProgram(), "ViewMatrix");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(viewMtx));
-	CHECKERROR;
-	scene.mLightManager.drawLight(lightShader.getProgram());
-	lightShader.Unuse();
+	// render the physical light objects in the scene
+	{
+		ShaderProgram lightShader = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::LIGHT_COLOR];
+		lightShader.Use();
+		int loc = glGetUniformLocation(lightShader.getProgram(), "ProjectionMatrix");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
+		loc = glGetUniformLocation(lightShader.getProgram(), "ViewMatrix");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(viewMtx));
+		CHECKERROR;
+		scene.mLightManager.draw(lightShader.getProgram());
+		lightShader.Unuse();
+	}
+	
 }

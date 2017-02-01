@@ -18,6 +18,7 @@
     <ClCompile Include="src\fbo.cpp" />
     <ClCompile Include="src\framework.cpp" />
     <ClCompile Include="src\graphicsObject.cpp" />
+    <ClCompile Include="src\graphicsObjectManager.cpp" />
     <ClCompile Include="src\light.cpp" />
     <ClCompile Include="src\lightManager.cpp" />
     <ClCompile Include="src\models.cpp" />
@@ -36,6 +37,7 @@
     <ClInclude Include="src\fbo.h" />
     <ClInclude Include="src\globals.h" />
     <ClInclude Include="src\graphicObject.h" />
+    <ClInclude Include="src\graphicsObjectManager.h" />
     <ClInclude Include="src\light.h" />
     <ClInclude Include="src\lightManager.h" />
     <ClInclude Include="src\pointLight.h" />
@@ -56,6 +58,10 @@
     <None Include="shaders\phong_Color.vert" />
     <None Include="shaders\phong_Texture.frag" />
     <None Include="shaders\phong_Texture.vert" />
+    <None Include="shaders\shadowDepth.frag" />
+    <None Include="shaders\shadowDepth.vert" />
+    <None Include="shaders\shadowDepthDraw.frag" />
+    <None Include="shaders\shadowDepthDraw.vert" />
     <None Include="shaders\skybox.frag" />
     <None Include="shaders\skybox.vert" />
   </ItemGroup>
