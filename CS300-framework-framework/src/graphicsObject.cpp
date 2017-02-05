@@ -2,6 +2,8 @@
 #include "GL\glew.h"
 #include "glm\ext.hpp"
 
+#define CHECKERROR {int err = glGetError(); if (err) { fprintf(stderr, "OpenGL error (at line %d): %s\n", __LINE__, gluErrorString(err)); exit(-1);} }
+
 graphicObject::graphicObject()
 {
 
@@ -50,12 +52,26 @@ void graphicObject::draw(unsigned int shader)
 	{
 		glActiveTexture(GL_TEXTURE0);    
 		glBindTexture(GL_TEXTURE_2D, textures[eTextureType::DIFFUSE]);
-		loc = glGetUniformLocation(shader, "material.diffuseMap");
+		int loc = glGetUniformLocation(shader, "material.diffuseMap");
 		glUniform1i(loc, 0);
+	}
+	else if (material == global::eObjectMaterialType::TEXTURE_SPECULAR)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textures[eTextureType::DIFFUSE]);
+		int loc = glGetUniformLocation(shader, "material.diffuseMap");
+		glUniform1i(loc, 0);
+		CHECKERROR;
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, textures[eTextureType::SPECULAR]);
+		loc = glGetUniformLocation(shader, "material.specularMap");
+		glUniform1i(loc, 1);
+		CHECKERROR;
 	}
 	
 	loc = glGetUniformLocation(shader, "material.materialShininess");
-	glUniform1f(loc, materialShininess);
+	float shiny = materialShininess / 255.f;
+	glUniform1f(loc, shiny);
 
 	glBindVertexArray(mesh);
 	glDrawElements(GL_TRIANGLES, meshIndexCount, GL_UNSIGNED_INT, 0);

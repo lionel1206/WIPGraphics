@@ -16,7 +16,7 @@ uniform vec3 phongSpecular;			   // Ks
 uniform float phongShininess;		   // n (exponent)
 uniform float lightAmbientStrength;
 
-out vec4 finalColor;
+out vec4 fragColor;
 
 // Calcualte and return a lighting value
 void main()
@@ -40,5 +40,5 @@ void main()
     vec3 BlinnSpecular = phongSpecular * lightValue * pow(max(dot(N, normalize(L + E)), 0.f), phongShininess);
     vec3 color = phongEmitted + Ambient + Diffuse + BlinnSpecular;
     
-	finalColor = vec4(color,0.0);
+	fragColor  = vec4(color,0.0);
 }

@@ -50,18 +50,24 @@
     <ClInclude Include="src\timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\deferred_gBuffer.frag" />
+    <None Include="shaders\deferred_gBuffer.vert" />
+    <None Include="shaders\deferred_lightPass.frag" />
+    <None Include="shaders\deferred_lightPass.vert" />
     <None Include="shaders\drawLight.frag" />
     <None Include="shaders\drawLight.vert" />
     <None Include="shaders\final.frag" />
     <None Include="shaders\final.vert" />
     <None Include="shaders\phong_Color.frag" />
     <None Include="shaders\phong_Color.vert" />
+    <None Include="shaders\phong_Texture_Specular.frag" />
+    <None Include="shaders\phong_Texture_Specular.vert" />
     <None Include="shaders\phong_Texture.frag" />
     <None Include="shaders\phong_Texture.vert" />
     <None Include="shaders\shadowDepth.frag" />
     <None Include="shaders\shadowDepth.vert" />
-    <None Include="shaders\shadowDepthDraw.frag" />
-    <None Include="shaders\shadowDepthDraw.vert" />
+    <None Include="shaders\drawQuad.frag" />
+    <None Include="shaders\drawQuad.vert" />
     <None Include="shaders\skybox.frag" />
     <None Include="shaders\skybox.vert" />
   </ItemGroup>

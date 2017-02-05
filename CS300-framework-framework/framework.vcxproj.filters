@@ -175,10 +175,28 @@
     <None Include="shaders\shadowDepth.vert">
       <Filter>shaders</Filter>
     </None>
-    <None Include="shaders\shadowDepthDraw.frag">
+    <None Include="shaders\drawQuad.frag">
       <Filter>shaders</Filter>
     </None>
-    <None Include="shaders\shadowDepthDraw.vert">
+    <None Include="shaders\drawQuad.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\deferred_gBuffer.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\deferred_gBuffer.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\phong_Texture_Specular.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\phong_Texture_Specular.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\deferred_lightPass.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\deferred_lightPass.vert">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

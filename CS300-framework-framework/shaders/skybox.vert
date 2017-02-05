@@ -8,6 +8,7 @@ out vec3 uv;
 
 void main()
 {
-    gl_Position = ProjectionMatrix * ViewMatrix * vertex;
+	vec4 position = ProjectionMatrix * ViewMatrix * vertex; 
+    gl_Position = position.xyww;
     uv = vertex.xyz;
 }

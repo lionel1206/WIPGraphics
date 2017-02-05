@@ -29,6 +29,16 @@ struct directionalShadowMapParam
 	FBO shadowDepthMap;
 };
 
+struct dsGBufferParam
+{
+	unsigned int gBuffer;
+	unsigned int gPositionTexture;
+	unsigned int gNormalTexture;
+	unsigned int gAlbedoTexture;
+	unsigned int gSpecularTexture;
+	unsigned int gDepthTexure;
+};
+
 class Scene
 {
 public:
@@ -53,8 +63,8 @@ public:
 	// Objects in the scene
 	unsigned int sphereVAO, sphereCount;
 	unsigned int teapotVAO, teapotCount;
-	unsigned int groundVAO, groundTexture;
-	unsigned int boxVAO, boxTexture;
+	unsigned int groundVAO, groundTexture, groundSpecular;
+	unsigned int boxVAO, boxTexture, boxSpecular;
 	unsigned int planeVAO, planceTexture;
 	unsigned int skyBoxTexture;
 	
@@ -78,9 +88,18 @@ public:
 	lightManager mLightManager;
 	directionalShadowMapParam dirShadowMap;
 	bool showShadowDepthMap = true;
-	unsigned int shadowDepthMapTextureQuad, shadowDepthQuadCount;
+	unsigned int quad, quadCount;
+	graphicObject quadObject;
+	dsGBufferParam gBufferData;
+	bool showGBuffer = true;
 };
-
+void renderGeometry(Scene &scene, unsigned int shader);
+void gatherShadowInfo(Scene &scene);
+void setUPGBuffer(Scene &scene);
+void renderLightingPass(Scene &scene);
+void drawGBuffer(Scene &scene);
+unsigned int loadTexture(const char* path);
+unsigned int loadCube(const std::vector<const char*> &facePath);
 void InitializeScene(Scene &scene);
 void BuildScene(Scene &scene);
 void DrawScene(Scene &scene);

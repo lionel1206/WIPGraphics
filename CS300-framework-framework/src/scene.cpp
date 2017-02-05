@@ -52,7 +52,62 @@ float shininess = 240;
 
 const float PI = 3.14159f;
 const float rad = PI/180.0f;
-meshData boxMesh, sphereMesh, groundMesh;
+meshData boxMesh, sphereMesh, groundMesh, quadMesh;
+
+void setUPGBuffer(Scene &scene)
+{
+	int width = (int)global::gWidth;
+	int height = (int)global::gHeight;
+	// bind FBO for G buffer
+	glGenFramebuffers(1, &scene.gBufferData.gBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, scene.gBufferData.gBuffer);
+	CHECKERROR;
+	// position texture buffer
+	glGenTextures(1, &scene.gBufferData.gPositionTexture);
+	glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gPositionTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, scene.gBufferData.gPositionTexture, 0);
+	CHECKERROR;
+	// Normal texture buffer
+	glGenTextures(1, &scene.gBufferData.gNormalTexture);
+	glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gNormalTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, scene.gBufferData.gNormalTexture, 0);
+	CHECKERROR;
+	// albedo buffer
+	glGenTextures(1, &scene.gBufferData.gAlbedoTexture);
+	glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gAlbedoTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, scene.gBufferData.gAlbedoTexture, 0);
+	CHECKERROR;
+	// specular buffer
+	glGenTextures(1, &scene.gBufferData.gSpecularTexture);
+	glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gSpecularTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, scene.gBufferData.gSpecularTexture, 0);
+	CHECKERROR;
+	unsigned int colorAttachment[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+	glDrawBuffers(4, colorAttachment);
+	CHECKERROR;
+	// depth buffer
+	glGenRenderbuffers(1, &scene.gBufferData.gDepthTexure);
+	glBindRenderbuffer(GL_RENDERBUFFER, scene.gBufferData.gDepthTexure);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, scene.gBufferData.gDepthTexure);
+	CHECKERROR;
+	int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE)
+		printf("FBO Error: %d\n", status);
+	CHECKERROR;
+}
 
 unsigned int loadCube(const std::vector<const char*> &facePath)
 {
@@ -66,7 +121,6 @@ unsigned int loadCube(const std::vector<const char*> &facePath)
 		int width, height, channel;
 		unsigned char *image = SOIL_load_image(facePath[i], &width, &height, &channel, SOIL_LOAD_RGBA);
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-
 	}
 
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -98,7 +152,6 @@ unsigned int loadTexture(const char* path)
 	SOIL_free_image_data(image);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	CHECKERROR;
-
 	return textureID;
 }
 
@@ -136,10 +189,12 @@ void InitializeScene(Scene &scene)
 		std::cout << "Unable to load assets/model/sphere.json" << std::endl;
 	scene.sphereVAO = createVAO(sphereMesh);
 
-	scene.shadowDepthMapTextureQuad = createQuad(scene.shadowDepthQuadCount);
+	scene.quad = createQuad(scene.quadCount);
 
-	scene.groundTexture = loadTexture("assets/texture/floor_diffuse.png");
+	scene.groundTexture = loadTexture("assets/texture/ground_diffuse.png");
+	scene.groundSpecular = loadTexture("assets/texture/ground_specular.png");
 	scene.boxTexture = loadTexture("assets/texture/crate_diffuse.png");
+	scene.boxSpecular= loadTexture("assets/texture/crate_specular.png");
 
 	std::vector<const char*> skyBoxTexturePaths = { "assets/texture/skybox_right.tga", "assets/texture/skybox_left.tga",
 		"assets/texture/skybox_up.tga", "assets/texture/skybox_down.tga",
@@ -215,6 +270,18 @@ void InitializeScene(Scene &scene)
 	CHECKERROR;
 	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::TEXTURE] = textureShader;
 
+	ShaderProgram textureSpecularShader;
+	textureSpecularShader.CreateProgram();
+	textureSpecularShader.CreateShader("shaders/phong_Texture_Specular.vert", GL_VERTEX_SHADER);
+	textureSpecularShader.CreateShader("shaders/phong_Texture_Specular.frag", GL_FRAGMENT_SHADER);
+
+	glBindAttribLocation(textureSpecularShader.getProgram(), 0, "vertex");
+	glBindAttribLocation(textureSpecularShader.getProgram(), 1, "vertexNormal");
+	glBindAttribLocation(textureSpecularShader.getProgram(), 2, "vertexTexture");
+	textureSpecularShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::TEXTURE_SPECULAR] = textureSpecularShader;
+
 	ShaderProgram lightShader;
 	lightShader.CreateProgram();
 	lightShader.CreateShader("shaders/drawLight.vert", GL_VERTEX_SHADER);
@@ -242,15 +309,36 @@ void InitializeScene(Scene &scene)
 	CHECKERROR;
 	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::SHADOW_DEPTH] = shadowDepthShader;
 
-	ShaderProgram shadowDepthRenderShader;
-	shadowDepthRenderShader.CreateProgram();
-	shadowDepthRenderShader.CreateShader("shaders/shadowDepthDraw.vert", GL_VERTEX_SHADER);
-	shadowDepthRenderShader.CreateShader("shaders/shadowDepthDraw.frag", GL_FRAGMENT_SHADER);
-	glBindAttribLocation(shadowDepthRenderShader.getProgram(), 0, "vertex");
-	glBindAttribLocation(shadowDepthRenderShader.getProgram(), 1, "vertexTexture");
-	shadowDepthRenderShader.LinkProgram();
+	ShaderProgram quadRenderShader;
+	quadRenderShader.CreateProgram();
+	quadRenderShader.CreateShader("shaders/drawQuad.vert", GL_VERTEX_SHADER);
+	quadRenderShader.CreateShader("shaders/drawQuad.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(quadRenderShader.getProgram(), 0, "vertex");
+	glBindAttribLocation(quadRenderShader.getProgram(), 1, "vertexTexture");
+	quadRenderShader.LinkProgram();
 	CHECKERROR;
-	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::SHADOW_DEPTH_FBO] = shadowDepthRenderShader;
+	scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_QUAD] = quadRenderShader;
+
+	ShaderProgram deferredGBufferShader;
+	deferredGBufferShader.CreateProgram();
+	deferredGBufferShader.CreateShader("shaders/deferred_gBuffer.vert", GL_VERTEX_SHADER);
+	deferredGBufferShader.CreateShader("shaders/deferred_gBuffer.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(deferredGBufferShader.getProgram(), 0, "vertex");
+	glBindAttribLocation(deferredGBufferShader.getProgram(), 1, "vertexNormal");
+	glBindAttribLocation(deferredGBufferShader.getProgram(), 2, "vertexTexture");
+	deferredGBufferShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][global::eObjectMaterialType::DEFERRED_GBUFFER] = deferredGBufferShader;
+
+	ShaderProgram deferredLightPassShader;
+	deferredLightPassShader.CreateProgram();
+	deferredLightPassShader.CreateShader("shaders/deferred_lightPass.vert", GL_VERTEX_SHADER);
+	deferredLightPassShader.CreateShader("shaders/deferred_lightPass.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(deferredLightPassShader.getProgram(), 0, "vertex");
+	glBindAttribLocation(deferredLightPassShader.getProgram(), 1, "vertexTexture");
+	deferredLightPassShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][global::eObjectMaterialType::DEFERRED_LIGHTING_PASS] = deferredLightPassShader;
 
 	scene.fovDeg = 45.f;
 	scene.nearplane = 0.1f;
@@ -262,6 +350,7 @@ void InitializeScene(Scene &scene)
 	// initialize and crate scene objects
 	graphicObject groundObject(glm::vec3(0.f, 0.f, 0.f), glm::vec3(), glm::vec3(250,1,250), scene.groundVAO, groundMesh.faces.size());
 	groundObject.setTextureMap(scene.groundTexture); 
+	groundObject.setSpecularMap(scene.groundSpecular);
 	scene.graphicsObjectContainer.push_back(groundObject);
 
 	glm::vec3 boxPosition[27] = { glm::vec3(-35, 15, -35), glm::vec3(0, 15, -35), glm::vec3(35, 15, -35),
@@ -282,8 +371,12 @@ void InitializeScene(Scene &scene)
 	{
 		graphicObject boxObject(boxPosition[i], glm::vec3(), boxScale, scene.boxVAO, boxMesh.faces.size());
 		boxObject.setTextureMap(scene.boxTexture);
+		boxObject.setSpecularMap(scene.boxSpecular);
 		scene.graphicsObjectContainer.push_back(boxObject);
 	}
+
+	setUPGBuffer(scene);
+	CHECKERROR;
 }
 ////////////////////////////////////////////////////////////////////////
 
@@ -294,50 +387,121 @@ void renderGeometry(Scene &scene, unsigned int shader)
 		scene.mAmbientLight.updateLightParameter(shader);
 		scene.mLightManager.passDataToShader(shader);
 		scene.graphicsObjectContainer[i].draw(shader);
+		CHECKERROR;
 	}
 }
 
-void gatherShadowInfo(Scene &scene)
+void renderLightingPass(Scene &scene)
 {
-	glViewport(0,0,scene.dirShadowMap.shadowMapWidth, scene.dirShadowMap.shadowMapHeight);
-	scene.dirShadowMap.shadowDepthMap.Bind();
-	glClear(GL_DEPTH_BUFFER_BIT);
-	float halfWidth = scene.dirShadowMap.lightFrustrumWidth / 2.f;
-	float halfHeight = scene.dirShadowMap.lightFrustrumHeight / 2.f;
-
-	glm::mat4 lightProjection = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, scene.nearplane, scene.farplane);
-
-	ShaderProgram shadowDepthShader = scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::SHADOW_DEPTH];
-	shadowDepthShader.Use();
-	for (auto dirLight : scene.mLightManager.getDirectionalLights())
-	{
-		glm::vec3 lightPos = -dirLight.getLightDirection() * scene.dirShadowMap.shadowDistance;
-		glm::mat4 lightView = glm::lookAt(lightPos, dirLight.getLightDirection(), glm::vec3(0, 1, 0));
-		glm::mat4 lightSpaceMtx = lightProjection * lightView;
-		int loc = glGetUniformLocation(shadowDepthShader.getProgram(), "LightSpaceMtx");
-		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(lightSpaceMtx));
-		
-		renderGeometry(scene, shadowDepthShader.getProgram());
-	}
-	shadowDepthShader.Unuse();
-	scene.dirShadowMap.shadowDepthMap.Unbind();
+	ShaderProgram deferredLightPassShader = scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][global::eObjectMaterialType::DEFERRED_LIGHTING_PASS];
+	deferredLightPassShader.Use();
+	unsigned int shader = deferredLightPassShader.getProgram();
+	scene.mAmbientLight.updateLightParameter(shader);
+	scene.mLightManager.passDataToShader(shader);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gPositionTexture);
+	int loc = glGetUniformLocation(shader, "gPositionTexture");
+	glUniform1i(loc, 0);
 	CHECKERROR;
-	if (scene.showShadowDepthMap)
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gNormalTexture);
+	loc = glGetUniformLocation(shader, "gNormalTexture");
+	glUniform1i(loc, 1);
+	CHECKERROR;
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gAlbedoTexture);
+	loc = glGetUniformLocation(shader, "gAlbedoTexture");
+	glUniform1i(loc, 2);
+	CHECKERROR;
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gSpecularTexture);
+	loc = glGetUniformLocation(shader, "gSpecularTexture");
+	glUniform1i(loc, 3);
+	CHECKERROR;
+	loc = glGetUniformLocation(shader, "cameraPos");
+	glUniform3fv(loc, 1, glm::value_ptr(scene.gEditorCamera.getPosition()));
+	glBindVertexArray(scene.quad);
+	glDrawElements(GL_TRIANGLES, scene.quadCount, GL_UNSIGNED_INT, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindVertexArray(0);
+	deferredLightPassShader.Unuse();
+}
+
+void drawGBuffer(Scene &scene)
+{
+	ShaderProgram quadShader = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_QUAD];
+	quadShader.Use();
+
+	// draw G buffer position
 	{
-		ShaderProgram shadowDepthRenderShader = scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::SHADOW_DEPTH_FBO];
-		shadowDepthRenderShader.Use();
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, scene.dirShadowMap.shadowDepthMap.getFBOTexture());
-		int loc = glGetUniformLocation(shadowDepthRenderShader.getProgram(), "shadowMapDepth");
+		glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gPositionTexture);
+		int loc = glGetUniformLocation(quadShader.getProgram(), "texture");
 		glUniform1i(loc, 0);
-		CHECKERROR;
-		glBindVertexArray(scene.shadowDepthMapTextureQuad);
-		glDrawElements(GL_TRIANGLES, scene.shadowDepthQuadCount, GL_UNSIGNED_INT, 0);
+		glm::mat4 scale = glm::scale(glm::vec3(0.25, 0.25, 0.25));
+		glm::mat4 translate = glm::translate(glm::vec3(0.75, 0.75, 0));
+		glm::mat4 transform = translate * scale;
+		loc = glGetUniformLocation(quadShader.getProgram(), "transform");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(transform));
+		glBindVertexArray(scene.quad);
+		glDrawElements(GL_TRIANGLES, scene.quadCount, GL_UNSIGNED_INT, 0);
 		glActiveTexture(GL_TEXTURE0);
 		glBindVertexArray(0);
-		CHECKERROR;
-		shadowDepthRenderShader.Unuse();
 	}
+
+	// draw G Buffer Normals
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gNormalTexture);
+		int loc = glGetUniformLocation(quadShader.getProgram(), "texture");
+		glUniform1i(loc, 0);
+		glm::mat4 scale = glm::scale(glm::vec3(0.25, 0.25, 0.25));
+		glm::mat4 translate = glm::translate(glm::vec3(0.75, 0.25, 0));
+		glm::mat4 transform = translate * scale;
+		loc = glGetUniformLocation(quadShader.getProgram(), "transform");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(transform));
+		glBindVertexArray(scene.quad);
+		glDrawElements(GL_TRIANGLES, scene.quadCount, GL_UNSIGNED_INT, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindVertexArray(0);
+	}
+
+	// draw G Buffer Albedo
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gAlbedoTexture);
+		int loc = glGetUniformLocation(quadShader.getProgram(), "texture");
+		glUniform1i(loc, 0);
+		glm::mat4 scale = glm::scale(glm::vec3(0.25, 0.25, 0.25));
+		glm::mat4 translate = glm::translate(glm::vec3(0.75, -0.25, 0));
+		glm::mat4 transform = translate * scale;
+		loc = glGetUniformLocation(quadShader.getProgram(), "transform");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(transform));
+		glBindVertexArray(scene.quad);
+		glDrawElements(GL_TRIANGLES, scene.quadCount, GL_UNSIGNED_INT, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindVertexArray(0);
+	}
+
+	// draw G Buffer specular
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, scene.gBufferData.gSpecularTexture);
+		int loc = glGetUniformLocation(quadShader.getProgram(), "texture");
+		glUniform1i(loc, 0);
+		glm::mat4 scale = glm::scale(glm::vec3(0.25, 0.25, 0.25));
+		glm::mat4 translate = glm::translate(glm::vec3(0.75, -0.75, 0));
+		glm::mat4 transform = translate * scale;
+		loc = glGetUniformLocation(quadShader.getProgram(), "transform");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(transform));
+		glBindVertexArray(scene.quad);
+		glDrawElements(GL_TRIANGLES, scene.quadCount, GL_UNSIGNED_INT, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindVertexArray(0);
+	}
+
+	quadShader.Unuse();
+	CHECKERROR;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -348,62 +512,45 @@ void DrawScene(Scene &scene)
     glViewport(0,0,scene.width, scene.height);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
-
+	CHECKERROR;
 	scene.gEditorCamera.update();
 	glm::mat4x4 viewMtx = scene.gEditorCamera.getViewMtx();
 	
 	// Calculate the inverse of the viewing matrix and send to the shader
 	glm::mat4x4 inverseViewMtx = glm::affineInverse(viewMtx);
 
-	// skybox render
-	{
-		glDepthMask(GL_FALSE);
-		ShaderProgram skyboxProgram = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_SKYBOX];
-		skyboxProgram.Use();
-		int loc = glGetUniformLocation(skyboxProgram.getProgram(), "ProjectionMatrix");
-		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
-
-		glm::mat4 skyboxView = glm::mat4(glm::mat3(viewMtx));
-		loc = glGetUniformLocation(skyboxProgram.getProgram(), "ViewMatrix");
-		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(skyboxView));
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, scene.skyBoxTexture);
-		loc = glGetUniformLocation(skyboxProgram.getProgram(), "skybox");
-		glUniform1i(loc, 0);
-
-		glBindVertexArray(scene.boxVAO);
-		glDrawElements(GL_TRIANGLES, boxMesh.faces.size(), GL_UNSIGNED_INT, 0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindVertexArray(0);
-		glDepthMask(GL_TRUE);
-	}
-	
-
 	scene.mLightManager.updateLightParameters(scene.pointLightParameters, scene.directionalLightParameters);
 	scene.mAmbientLight.setAmbientColor(scene.ambientLightParameters.ambientLightColor);
 	scene.mAmbientLight.setAmbientStrength(scene.ambientLightParameters.ambientLightStrength);
-
-	//gatherShadowInfo(scene);
-
-	// render all objects in scene
+	CHECKERROR;
+	// render to G BUFFER
 	{
-		auto lightType = global::eLightingType::BLINN_PHONG;
-		auto modelMaterial = global::eObjectMaterialType::TEXTURE;
+		glBindFramebuffer(GL_FRAMEBUFFER, scene.gBufferData.gBuffer);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		auto lightType = global::eLightingType::DEFERRED_BLINN_PHONG;
+		auto modelMaterial = global::eObjectMaterialType::DEFERRED_GBUFFER;
 		ShaderProgram currentShader = scene.shaderLibrary[lightType][modelMaterial];
 		currentShader.Use();
 		int loc = glGetUniformLocation(currentShader.getProgram(), "ProjectionMatrix");
 		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
 		loc = glGetUniformLocation(currentShader.getProgram(), "ViewMatrix");
 		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(viewMtx));
-		loc = glGetUniformLocation(currentShader.getProgram(), "cameraPos");
-		glUniform3fv(loc, 1, glm::value_ptr(scene.gEditorCamera.getPosition()));
-		loc = glGetUniformLocation(currentShader.getProgram(), "ViewInverse");
-		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(inverseViewMtx));
 		renderGeometry(scene, currentShader.getProgram());
 		currentShader.Unuse();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
-	
+	CHECKERROR;
+	// deferred lighting pass
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	renderLightingPass(scene);
+	CHECKERROR;
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, scene.gBufferData.gBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBlitFramebuffer(0, 0, scene.width, scene.height, 0, 0, scene.width, scene.height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	CHECKERROR;
 
 	// render the physical light objects in the scene
 	{
@@ -413,9 +560,37 @@ void DrawScene(Scene &scene)
 		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
 		loc = glGetUniformLocation(lightShader.getProgram(), "ViewMatrix");
 		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(viewMtx));
-		CHECKERROR;
 		scene.mLightManager.draw(lightShader.getProgram());
 		lightShader.Unuse();
 	}
+	CHECKERROR;
+
+	// render the G buffer
+	if(scene.showGBuffer)
+	{
+		drawGBuffer(scene);
+	}
 	
+	// skybox render
+	{
+		glDepthFunc(GL_LEQUAL);
+		ShaderProgram skyboxProgram = scene.shaderLibrary[global::eLightingType::NO_LIGHTING][global::eObjectMaterialType::TEXTURE_SKYBOX];
+		skyboxProgram.Use();
+		int loc = glGetUniformLocation(skyboxProgram.getProgram(), "ProjectionMatrix");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(scene.perspectiveMtx));
+		glm::mat4 skyboxView = glm::mat4(glm::mat3(viewMtx));
+		loc = glGetUniformLocation(skyboxProgram.getProgram(), "ViewMatrix");
+		glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(skyboxView));
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, scene.skyBoxTexture);
+		loc = glGetUniformLocation(skyboxProgram.getProgram(), "skybox");
+		glUniform1i(loc, 0);
+		glBindVertexArray(scene.boxVAO);
+		glDrawElements(GL_TRIANGLES, boxMesh.faces.size(), GL_UNSIGNED_INT, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindVertexArray(0);
+		skyboxProgram.Unuse();
+		glDepthFunc(GL_LESS);
+	}
+	CHECKERROR;
 }
