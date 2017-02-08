@@ -92,6 +92,7 @@ public:
 	graphicObject quadObject;
 	dsGBufferParam gBufferData;
 	bool showGBuffer = true;
+	bool enableGammaCorrection = true;
 };
 void renderGeometry(Scene &scene, unsigned int shader);
 void gatherShadowInfo(Scene &scene);

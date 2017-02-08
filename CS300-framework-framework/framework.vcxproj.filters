@@ -199,5 +199,17 @@
     <None Include="shaders\deferred_lightPass.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\finalRender.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\finalRender.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\deferred_lightPassGamma.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\deferred_gBufferGamma.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

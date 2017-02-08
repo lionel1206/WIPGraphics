@@ -52,12 +52,16 @@
   <ItemGroup>
     <None Include="shaders\deferred_gBuffer.frag" />
     <None Include="shaders\deferred_gBuffer.vert" />
+    <None Include="shaders\deferred_gBufferGamma.frag" />
     <None Include="shaders\deferred_lightPass.frag" />
     <None Include="shaders\deferred_lightPass.vert" />
+    <None Include="shaders\deferred_lightPassGamma.frag" />
     <None Include="shaders\drawLight.frag" />
     <None Include="shaders\drawLight.vert" />
     <None Include="shaders\final.frag" />
     <None Include="shaders\final.vert" />
+    <None Include="shaders\finalRender.frag" />
+    <None Include="shaders\finalRender.vert" />
     <None Include="shaders\phong_Color.frag" />
     <None Include="shaders\phong_Color.vert" />
     <None Include="shaders\phong_Texture_Specular.frag" />

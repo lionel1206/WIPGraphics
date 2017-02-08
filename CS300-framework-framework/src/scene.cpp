@@ -271,7 +271,7 @@ void InitializeScene(Scene &scene)
 	scene.shaderLibrary[global::eLightingType::BLINN_PHONG][global::eObjectMaterialType::TEXTURE] = textureShader;
 
 	ShaderProgram textureSpecularShader;
-	textureSpecularShader.CreateProgram();
+	textureSpecularShader.CreateProgram(); 
 	textureSpecularShader.CreateShader("shaders/phong_Texture_Specular.vert", GL_VERTEX_SHADER);
 	textureSpecularShader.CreateShader("shaders/phong_Texture_Specular.frag", GL_FRAGMENT_SHADER);
 
@@ -330,6 +330,17 @@ void InitializeScene(Scene &scene)
 	CHECKERROR;
 	scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][global::eObjectMaterialType::DEFERRED_GBUFFER] = deferredGBufferShader;
 
+	ShaderProgram deferredGBufferGammaShader;
+	deferredGBufferGammaShader.CreateProgram();
+	deferredGBufferGammaShader.CreateShader("shaders/deferred_gBuffer.vert", GL_VERTEX_SHADER);
+	deferredGBufferGammaShader.CreateShader("shaders/deferred_gBufferGamma.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(deferredGBufferGammaShader.getProgram(), 0, "vertex");
+	glBindAttribLocation(deferredGBufferGammaShader.getProgram(), 1, "vertexNormal");
+	glBindAttribLocation(deferredGBufferGammaShader.getProgram(), 2, "vertexTexture");
+	deferredGBufferGammaShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][global::eObjectMaterialType::DEFERRED_GBUFFER_GAMMA] = deferredGBufferGammaShader;
+
 	ShaderProgram deferredLightPassShader;
 	deferredLightPassShader.CreateProgram();
 	deferredLightPassShader.CreateShader("shaders/deferred_lightPass.vert", GL_VERTEX_SHADER);
@@ -339,6 +350,16 @@ void InitializeScene(Scene &scene)
 	deferredLightPassShader.LinkProgram();
 	CHECKERROR;
 	scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][global::eObjectMaterialType::DEFERRED_LIGHTING_PASS] = deferredLightPassShader;
+
+	ShaderProgram deferredLightPassGammaShader;
+	deferredLightPassGammaShader.CreateProgram();
+	deferredLightPassGammaShader.CreateShader("shaders/deferred_lightPass.vert", GL_VERTEX_SHADER);
+	deferredLightPassGammaShader.CreateShader("shaders/deferred_lightPassGamma.frag", GL_FRAGMENT_SHADER);
+	glBindAttribLocation(deferredLightPassGammaShader.getProgram(), 0, "vertex");
+	glBindAttribLocation(deferredLightPassGammaShader.getProgram(), 1, "vertexTexture");
+	deferredLightPassGammaShader.LinkProgram();
+	CHECKERROR;
+	scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][global::eObjectMaterialType::DEFERRED_LIGHTING_PASS_GAMMA] = deferredLightPassGammaShader;
 
 	scene.fovDeg = 45.f;
 	scene.nearplane = 0.1f;
@@ -393,7 +414,12 @@ void renderGeometry(Scene &scene, unsigned int shader)
 
 void renderLightingPass(Scene &scene)
 {
-	ShaderProgram deferredLightPassShader = scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][global::eObjectMaterialType::DEFERRED_LIGHTING_PASS];
+	auto materialType = global::eObjectMaterialType::DEFERRED_LIGHTING_PASS;
+	if (scene.enableGammaCorrection)
+	{
+		materialType = global::eObjectMaterialType::DEFERRED_LIGHTING_PASS_GAMMA;
+	}
+	ShaderProgram deferredLightPassShader = scene.shaderLibrary[global::eLightingType::DEFERRED_BLINN_PHONG][materialType];
 	deferredLightPassShader.Use();
 	unsigned int shader = deferredLightPassShader.getProgram();
 	scene.mAmbientLight.updateLightParameter(shader);
@@ -530,6 +556,10 @@ void DrawScene(Scene &scene)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		auto lightType = global::eLightingType::DEFERRED_BLINN_PHONG;
 		auto modelMaterial = global::eObjectMaterialType::DEFERRED_GBUFFER;
+		if (scene.enableGammaCorrection)
+		{
+			modelMaterial = global::eObjectMaterialType::DEFERRED_GBUFFER_GAMMA;
+		}
 		ShaderProgram currentShader = scene.shaderLibrary[lightType][modelMaterial];
 		currentShader.Use();
 		int loc = glGetUniformLocation(currentShader.getProgram(), "ProjectionMatrix");

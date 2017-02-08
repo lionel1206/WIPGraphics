@@ -26,7 +26,7 @@ struct pointLightStruct
 };
 
 in vec2 uv;
-out vec4 fragColor;
+out vec3 finalRenderTexture;
 
 uniform sampler2D gPositionTexture;
 uniform sampler2D gNormalTexture;
@@ -91,5 +91,5 @@ void main()
 	}
     
     
-	fragColor = vec4(dirLightColor + ptLightColor,0.0);
+	finalRenderTexture = dirLightColor + ptLightColor;
 }

@@ -251,7 +251,8 @@ int main(int argc, char** argv)
 	TwBar* atSceneControl = TwNewBar("Scene Control");
 	TwBar* atLightControl = TwNewBar("Lighting Control");
 	TwAddVarRO(atSceneControl, "FPS", TW_TYPE_FLOAT, &global::timer::mFPS, "");
-	TwAddVarRW(atSceneControl, "Show G Buffer", TW_TYPE_BOOL32, &scene.showGBuffer, "");
+	TwAddVarRW(atSceneControl, "Show G Buffer", TW_TYPE_BOOL8, &scene.showGBuffer, "");
+	TwAddVarRW(atSceneControl, "Enable Gamma Correction", TW_TYPE_BOOL8, &scene.enableGammaCorrection, "");
 	TwAddVarRW(atLightControl, "Ambient Light Color", TW_TYPE_COLOR3F, &scene.ambientLightParameters.ambientLightColor, "group=AmbientLight");
 	TwAddVarRW(atLightControl, "Ambient Light Strength", TW_TYPE_FLOAT, &scene.ambientLightParameters.ambientLightStrength, "group=AmbientLight");
 	for (unsigned int i = 0; i < scene.directionalLightParameters.size(); ++i)
